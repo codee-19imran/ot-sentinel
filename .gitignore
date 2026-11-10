@@ -8,6 +8,12 @@ ot_sentinel_db*
 *.trace.db
 *.lock.db
 
+### Credentials (never commit) ###
+github_pat
+*.pem
+*.key
+
+
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/

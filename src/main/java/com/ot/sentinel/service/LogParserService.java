@@ -2,6 +2,8 @@ package com.ot.sentinel.service;
 
 import com.ot.sentinel.model.LogEntry;
 import com.ot.sentinel.repository.LogEntryRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,6 +23,8 @@ import java.util.List;
 @Service
 public class LogParserService {
 
+    private static final Logger log = LoggerFactory.getLogger(LogParserService.class);
+
     private final LogEntryRepository logEntryRepository;
 
     public LogParserService(LogEntryRepository logEntryRepository) {
@@ -36,6 +40,7 @@ public class LogParserService {
      */
     public List<LogEntry> parseAndSaveLogs(MultipartFile file) throws IOException {
         List<LogEntry> entries = new ArrayList<>();
+        int rejected = 0;
 
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
@@ -65,11 +70,17 @@ public class LogParserService {
                             .rawLine(line)
                             .build();
                     entries.add(entry);
+                } else {
+                    rejected++;
+                    log.warn("{}: skipped malformed row: {}", file.getOriginalFilename(), line);
                 }
             }
         }
 
-        return logEntryRepository.saveAll(entries);
+        List<LogEntry> saved = logEntryRepository.saveAll(entries);
+        log.info("Parsed {}: {} rows stored, {} malformed rows skipped",
+                file.getOriginalFilename(), saved.size(), rejected);
+        return saved;
     }
 
     private boolean isHeader(String line) {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>OT-Sentinel | Forensic Dashboard</title>
     <link th:href="@{/lib/bootstrap.min.css}" rel="stylesheet"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"/>
+    <link th:href="@{/lib/leaflet/leaflet.css}" rel="stylesheet"/>
     <style>
         body { background: #f8fafc; color: #0f172a; }
         .navbar { background: #0f172a; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
@@ -143,8 +143,35 @@
                     <h6 class="mb-0">Sample Data</h6>
                 </div>
                 <div class="card-body">
-                    <p class="small text-muted">Use <code>sample-data/plc_logs.csv</code> (150 rows, includes a brute-force
-                        burst and unusual STOP commands) to test detection.</p>
+                    <p class="small text-muted">Use <code>sample-data/plc_logs.csv</code> (151 rows, includes a brute-force
+                        burst and unusual STOP/DELETE commands) to test detection.</p>
+                </div>
+            </div>
+
+            <div class="card mt-3">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">Recent Log Entries</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div style="max-height: 320px; overflow-y: auto;">
+                        <table class="table table-sm mb-0" style="font-size: 0.8rem;">
+                            <thead>
+                            <tr><th>Timestamp</th><th>Source IP</th><th>Cmd</th><th>Status</th><th>Device</th></tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="entry : ${recentLogs}">
+                                <td th:text="${#temporals.format(entry.timestamp, 'dd-MM HH:mm:ss')}">…</td>
+                                <td th:text="${entry.sourceIp}">…</td>
+                                <td th:text="${entry.commandType}">…</td>
+                                <td>
+                                    <span th:classappend="${entry.status == 'FAILURE'} ? 'text-danger fw-bold' : 'text-success'"
+                                          th:text="${entry.status}">SUCCESS</span>
+                                </td>
+                                <td th:text="${entry.deviceId}">…</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -174,6 +201,13 @@
                     <div class="card">
                         <div class="card-header bg-white"><strong>Top Source IPs</strong></div>
                         <div class="card-body p-0"><canvas id="chartTopIps"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="col-12 chart-card">
+                    <div class="card">
+                        <div class="card-header bg-white"><strong>Incidents by Severity</strong></div>
+                        <div class="card-body p-0"><canvas id="chartSeverity"></canvas></div>
                     </div>
                 </div>
             </div>
@@ -231,7 +265,7 @@
 
 <script th:src="@{/lib/bootstrap.bundle.min.js}"></script>
 <script th:src="@{/lib/chart.umd.min.js}"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script th:src="@{/lib/leaflet/leaflet.min.js}"></script>
 <script>
     // ---------- Charts ----------
     async function loadJson(path) {
@@ -301,6 +335,27 @@
         });
     }
 
+    async function renderChartSeverity() {
+        const data = await loadJson('/api/charts/incident-severity');
+        if (!data) return;
+        const order = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+        const colors = {CRITICAL: '#7f1d1d', HIGH: '#ef4444', MEDIUM: '#f59e0b', LOW: '#10b981'};
+        const sorted = order.map(s => data.find(d => d.severity === s)).filter(Boolean);
+        new Chart(document.getElementById('chartSeverity'), {
+            type: 'bar',
+            data: {
+                labels: sorted.map(d => d.severity),
+                datasets: [{label: 'Incidents', data: sorted.map(d => d.count),
+                    backgroundColor: sorted.map(d => colors[d.severity] || '#94a3b8')}]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {y: {beginAtZero: true, ticks: {stepSize: 1}}},
+                plugins: {legend: {display: false}}
+            }
+        });
+    }
+
     function ipToLatLon(ip) {
         let h = 0;
         for (let i = 0; i < ip.length; i++) h = ((h << 5) - h + ip.charCodeAt(i)) | 0;
@@ -331,6 +386,7 @@
         renderChartStatus();
         renderChartTimeline();
         renderChartTopIps();
+        renderChartSeverity();
         initThreatMap();
     });
 </script>

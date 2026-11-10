@@ -69,6 +69,13 @@ public class DashboardController {
         model.addAttribute("incidents", incidents);
         model.addAttribute("highSeverity",
                 incidents.stream().filter(i -> "HIGH".equals(i.getSeverity()) || "CRITICAL".equals(i.getSeverity())).count());
+
+        List<LogEntry> recentLogs = logEntryRepository.findAll().stream()
+                .filter(e -> e.getTimestamp() != null)
+                .sorted(java.util.Comparator.comparing(LogEntry::getTimestamp).reversed())
+                .limit(20)
+                .collect(Collectors.toList());
+        model.addAttribute("recentLogs", recentLogs);
         return "dashboard";
     }
 
@@ -77,11 +84,11 @@ public class DashboardController {
     public String uploadLogs(@RequestParam("file") MultipartFile file,
                              RedirectAttributes redirect) {
         try {
-            logParserService.parseAndSaveLogs(file);
+            List<LogEntry> saved = logParserService.parseAndSaveLogs(file);
             List<Incident> incidents = anomalyDetectionService.detectAll();
             redirect.addFlashAttribute("success",
-                    "Log file \"" + file.getOriginalFilename() + "\" parsed. "
-                            + incidents.size() + " incident(s) flagged by the rule engine.");
+                    "Log file \"" + file.getOriginalFilename() + "\": " + saved.size()
+                            + " row(s) parsed, " + incidents.size() + " incident(s) flagged by the rule engine.");
         } catch (Exception e) {
             redirect.addFlashAttribute("error", "Failed to parse log file: " + e.getMessage());
         }
@@ -145,6 +152,22 @@ public class DashboardController {
                 .map(e -> {
                     Map<String, Object> row = new HashMap<>();
                     row.put("ip", e.getKey());
+                    row.put("count", e.getValue());
+                    return row;
+                })
+                .collect(Collectors.toList());
+    }
+
+    @GetMapping("/api/charts/incident-severity")
+    @ResponseBody
+    public List<Map<String, Object>> incidentSeverity() {
+        return incidentRepository.findAll().stream()
+                .filter(i -> i.getSeverity() != null)
+                .collect(Collectors.groupingBy(com.ot.sentinel.model.Incident::getSeverity, Collectors.counting()))
+                .entrySet().stream()
+                .map(e -> {
+                    Map<String, Object> row = new HashMap<>();
+                    row.put("severity", e.getKey());
                     row.put("count", e.getValue());
                     return row;
                 })
