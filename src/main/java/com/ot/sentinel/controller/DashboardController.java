@@ -118,7 +118,8 @@ public class DashboardController {
     public String rerunDetection(RedirectAttributes redirect) {
         List<Incident> incidents = anomalyDetectionService.detectAll();
         redirect.addFlashAttribute("info",
-                "Re-ran detection rules: " + incidents.size() + " incident(s) flagged.");
+                "Re-scan complete: rules re-run over all " + logEntryRepository.count()
+                        + " stored log(s) - " + incidents.size() + " incident(s) flagged.");
         return "redirect:/dashboard";
     }
 

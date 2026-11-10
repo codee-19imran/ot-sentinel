@@ -156,7 +156,11 @@
                         <button type="submit" class="btn btn-outline-primary w-100">Normalise &amp; Detect</button>
                     </form>
                     <form th:action="@{/incidents/detect}" method="post" class="mt-3">
-                        <button type="submit" class="btn btn-outline-secondary w-100">Re-run Detection Rules</button>
+                        <button type="submit" class="btn btn-outline-secondary w-100"
+                                title="Re-scans every log already stored in the database and rebuilds the incident list from scratch - you do NOT need to upload the file again. Useful after a restart or after changing the rule thresholds in application.properties.">
+                            Re-scan Stored Logs</button>
+                        <p class="small text-muted mt-2 mb-0">Re-runs the rule engine over all logs already ingested
+                            &mdash; no re-upload needed.</p>
                     </form>
                 </div>
             </div>
