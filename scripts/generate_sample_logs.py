@@ -28,6 +28,10 @@ IPS = ["192.168.1.10", "192.168.1.11", "192.168.1.20", "10.0.0.5", "10.0.0.99",
 COMMANDS = ["READ", "WRITE", "LOGIN"]
 DEVICES = ["PLC-01", "PLC-02", "PLC-03", "RTU-01", "RTU-02", "HMI-CONTROL-03"]
 
+# Public resolvers the plant talks to. Their ranges are in the IP location
+# register, so the threat map can show a verified public location for them.
+PUBLIC_IPS = ["8.8.4.210", "8.8.8.210", "1.1.1.44", "9.9.9.44"]
+
 
 def fmt(ts):
     return ts.strftime("%Y-%m-%d %H:%M:%S")
@@ -46,6 +50,12 @@ def build_rows():
         status = "FAIL" if random.random() < 0.10 else "OK"
         rows.append((ts, random.choice(DEVICES), random.choice(IPS),
                      random.choice(COMMANDS), status))
+
+    # A little external egress: the plant resolving names through public DNS.
+    egress = now - datetime.timedelta(minutes=40)
+    for k in range(8):
+        rows.append((egress + datetime.timedelta(seconds=k * 90), "RTU-01",
+                     PUBLIC_IPS[k % len(PUBLIC_IPS)], "READ", "OK"))
 
     # Brute-force burst: 12 failed logins inside the 60-minute window.
     bf = now - datetime.timedelta(minutes=25)

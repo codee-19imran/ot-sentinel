@@ -1,0 +1,41 @@
+# OT-Sentinel IP location register
+#
+# Maps source IP addresses to REAL coordinates for the threat map.
+#
+# An air-gapped installation cannot query a public GeoIP service, so the mapping
+# is local data. Two kinds of entries are valid here:
+#
+#   1. Public address ranges with their verified real-world coordinates.
+#   2. Your own plant sites / assets, with the coordinates of that site.
+#
+# IMPORTANT: RFC1918 private addresses (10/8, 172.16/12, 192.168/16) have NO
+# public geolocation. Only list them if you know where that device physically
+# is - otherwise they are reported as "internal, no location registered" and
+# are NOT pinned on the map. Placing them at a guessed position would be
+# fabricated evidence, which is exactly what a forensics tool must not do.
+#
+# Format: ip_range,label,latitude,longitude
+#   ip_range  a single address (8.8.8.8) or a CIDR block (8.8.8.0/24)
+#   label     what the address is / where it is (may contain commas)
+#   lat,lon   decimal degrees (WGS84)
+# The last two fields are always the coordinates. The most specific match
+# wins; an exact address beats a CIDR block.
+#
+# --- Verified public ranges ---------------------------------------------
+ip_range,label,latitude,longitude
+8.8.8.0/24,Google Public DNS (Mountain View, US),37.3860,-122.0838
+8.8.4.0/24,Google Public DNS (Mountain View, US),37.3860,-122.0838
+1.1.1.0/24,Cloudflare DNS (San Francisco, US),37.7749,-122.4194
+1.0.0.0/24,Cloudflare DNS (San Francisco, US),37.7749,-122.4194
+9.9.9.0/24,Quad9 resolver (Zurich, CH),47.3769,8.5417
+94.100.176.0/20,Quad9 resolver (Zurich, CH),47.3769,8.5417
+208.67.222.0/24,OpenDNS resolver (San Francisco, US),37.7749,-122.4194
+4.2.2.0/24,Level3 resolver (Ashburn, US),39.0438,-77.4874
+216.58.192.0/19,Google (Mountain View, US),37.3860,-122.0838
+#
+# --- Your plant sites ----------------------------------------------------
+# Add one line per site with its REAL coordinates, for example:
+# 192.168.10.0/24,Plant Rotterdam - floor A,51.9244,4.4777
+# 192.168.20.0/24,Plant Ghent - line B,51.0544,3.7174
+# 192.168.1.50,HMI-CONTROL-03 - control room,51.9256,4.4795
+#

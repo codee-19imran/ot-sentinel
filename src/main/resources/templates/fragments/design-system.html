@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <!--
+      OT-Sentinel design system - shared by every screen.
+      Semantic tokens (colour, type, spacing, motion) live here so the login
+      page and the dashboard cannot drift apart.
+    -->
+    <style th:fragment="tokens">
+        :root {
+            /* ---- Surfaces & neutrals ---- */
+            --ot-canvas: #f4f7fb;
+            --ot-surface: #ffffff;
+            --ot-surface-muted: #f8fafc;
+            --ot-line: #e2e8f0;
+            --ot-line-strong: #cbd5e1;
+
+            /* ---- Dark chrome ---- */
+            --ot-navy-900: #0b1220;
+            --ot-navy-800: #0f172a;
+            --ot-navy-700: #1e293b;
+            --ot-navy-600: #334155;
+
+            /* ---- Text ---- */
+            --ot-text: #0f172a;
+            --ot-text-soft: #475569;
+            --ot-text-muted: #64748b;
+            --ot-text-faint: #94a3b8;
+            --ot-text-inverse: #e2e8f0;
+
+            /* ---- Brand / semantic ---- */
+            --ot-primary: #0891b2;
+            --ot-primary-strong: #06b6d4;
+            --ot-primary-soft: #ecfeff;
+            --ot-accent: #22d3ee;
+
+            --ot-success: #059669;
+            --ot-success-soft: #ecfdf5;
+            --ot-warning: #d97706;
+            --ot-warning-soft: #fffbeb;
+            --ot-danger: #dc2626;
+            --ot-danger-soft: #fef2f2;
+            --ot-critical: #991b1b;
+            --ot-critical-soft: #fee2e2;
+            --ot-info: #2563eb;
+            --ot-info-soft: #eff6ff;
+
+            /* ---- Typography ---- */
+            --ot-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+                            "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            --ot-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+                            "Liberation Mono", "Courier New", monospace;
+
+            --ot-fs-xs: 0.6875rem;
+            --ot-fs-sm: 0.8125rem;
+            --ot-fs-base: 0.9375rem;
+            --ot-fs-md: 1rem;
+            --ot-fs-lg: 1.125rem;
+            --ot-fs-xl: 1.375rem;
+            --ot-fs-2xl: 1.875rem;
+
+            --ot-lh-tight: 1.25;
+            --ot-lh-normal: 1.55;
+            --ot-ls-tight: -0.012em;
+            --ot-ls-wide: 0.08em;
+
+            /* ---- Shape & depth ---- */
+            --ot-radius-sm: 6px;
+            --ot-radius: 10px;
+            --ot-radius-lg: 14px;
+            --ot-radius-pill: 999px;
+
+            --ot-shadow-xs: 0 1px 2px rgba(15, 23, 42, .05);
+            --ot-shadow-sm: 0 1px 3px rgba(15, 23, 42, .07), 0 1px 2px rgba(15, 23, 42, .04);
+            --ot-shadow: 0 6px 16px -4px rgba(15, 23, 42, .10), 0 2px 6px -2px rgba(15, 23, 42, .05);
+            --ot-shadow-lg: 0 18px 40px -12px rgba(15, 23, 42, .22);
+
+            /* ---- Motion ---- */
+            --ot-ease: cubic-bezier(.4, 0, .2, 1);
+            --ot-fast: 140ms;
+            --ot-base: 220ms;
+            --ot-slow: 380ms;
+
+            --ot-focus-ring: 0 0 0 3px rgba(34, 211, 238, .38);
+        }
+
+        /* ================= base ================= */
+        html { -webkit-text-size-adjust: 100%; }
+
+        body {
+            background: var(--ot-canvas);
+            color: var(--ot-text);
+            font-family: var(--ot-font-sans);
+            font-size: var(--ot-fs-base);
+            line-height: var(--ot-lh-normal);
+            letter-spacing: var(--ot-ls-tight);
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-weight: 700;
+            line-height: var(--ot-lh-tight);
+            letter-spacing: var(--ot-ls-tight);
+            color: var(--ot-text);
+        }
+
+        code, pre, .mono {
+            font-family: var(--ot-font-mono);
+            font-size: 0.9em;
+        }
+
+        code {
+            background: var(--ot-surface-muted);
+            border: 1px solid var(--ot-line);
+            border-radius: var(--ot-radius-sm);
+            padding: 1px 5px;
+            color: var(--ot-navy-700);
+            word-break: break-word;
+        }
+
+        ::selection { background: rgba(34, 211, 238, .28); }
+
+        /* ================= focus ================= */
+        a:focus-visible,
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible,
+        [tabindex]:focus-visible {
+            outline: none;
+            box-shadow: var(--ot-focus-ring);
+            border-radius: var(--ot-radius-sm);
+        }
+
+        /* ================= buttons ================= */
+        .btn {
+            font-weight: 600;
+            letter-spacing: var(--ot-ls-tight);
+            border-radius: var(--ot-radius-sm);
+            transition: background-color var(--ot-fast) var(--ot-ease),
+                        border-color var(--ot-fast) var(--ot-ease),
+                        color var(--ot-fast) var(--ot-ease),
+                        box-shadow var(--ot-fast) var(--ot-ease),
+                        transform var(--ot-fast) var(--ot-ease);
+        }
+
+        .btn:active { transform: translateY(1px); }
+
+        .btn-primary {
+            background: var(--ot-primary);
+            border-color: var(--ot-primary);
+            color: #fff;
+        }
+        .btn-primary:hover, .btn-primary:focus {
+            background: #0e7490;
+            border-color: #0e7490;
+            box-shadow: 0 6px 14px -6px rgba(8, 145, 178, .7);
+        }
+
+        .btn-outline-primary { color: var(--ot-primary); border-color: var(--ot-line-strong); }
+        .btn-outline-primary:hover {
+            background: var(--ot-primary-soft);
+            border-color: var(--ot-primary);
+            color: #0e7490;
+        }
+
+        .btn-outline-secondary { color: var(--ot-text-soft); border-color: var(--ot-line-strong); }
+        .btn-outline-secondary:hover {
+            background: var(--ot-surface-muted);
+            border-color: var(--ot-text-faint);
+            color: var(--ot-text);
+        }
+
+        .btn-outline-danger { color: var(--ot-danger); border-color: #fca5a5; }
+        .btn-outline-danger:hover { background: var(--ot-danger-soft); border-color: var(--ot-danger); color: var(--ot-critical); }
+
+        .btn-success { background: var(--ot-success); border-color: var(--ot-success); color: #fff; }
+        .btn-success:hover, .btn-success:focus {
+            background: #047857; border-color: #047857;
+            box-shadow: 0 6px 14px -6px rgba(5, 150, 105, .7);
+        }
+
+        /* ================= forms ================= */
+        .form-control, .form-select {
+            font-size: var(--ot-fs-base);
+            border: 1px solid var(--ot-line-strong);
+            border-radius: var(--ot-radius-sm);
+            padding: 8px 12px;
+            color: var(--ot-text);
+            background-color: var(--ot-surface);
+            transition: border-color var(--ot-fast) var(--ot-ease),
+                        box-shadow var(--ot-fast) var(--ot-ease);
+        }
+
+        .form-control:hover { border-color: var(--ot-text-faint); }
+
+        .form-control:focus {
+            border-color: var(--ot-primary-strong);
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, .25);
+        }
+
+        .form-label {
+            font-size: var(--ot-fs-sm);
+            font-weight: 600;
+            color: var(--ot-text-soft);
+            letter-spacing: var(--ot-ls-tight);
+        }
+
+        /* ================= cards ================= */
+        .ot-card {
+            background: var(--ot-surface);
+            border: 1px solid var(--ot-line);
+            border-radius: var(--ot-radius);
+            box-shadow: var(--ot-shadow-sm);
+            transition: box-shadow var(--ot-base) var(--ot-ease),
+                        transform var(--ot-base) var(--ot-ease),
+                        border-color var(--ot-base) var(--ot-ease);
+        }
+
+        .ot-card:hover {
+            box-shadow: var(--ot-shadow);
+            border-color: var(--ot-line-strong);
+        }
+
+        .ot-card-header {
+            background: var(--ot-surface);
+            border-bottom: 1px solid var(--ot-line);
+            padding: 12px 16px;
+            font-weight: 700;
+            font-size: var(--ot-fs-base);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            border-radius: var(--ot-radius) var(--ot-radius) 0 0;
+        }
+
+        .ot-card-body { padding: 16px; }
+
+        /* ================= tables ================= */
+        .ot-table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; }
+
+        .ot-table thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: var(--ot-surface-muted);
+            color: var(--ot-text-soft);
+            font-size: var(--ot-fs-xs);
+            font-weight: 700;
+            letter-spacing: var(--ot-ls-wide);
+            text-transform: uppercase;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--ot-line);
+            white-space: nowrap;
+        }
+
+        .ot-table tbody td {
+            padding: 8px 12px;
+            font-size: var(--ot-fs-sm);
+            border-bottom: 1px solid var(--ot-line);
+            vertical-align: middle;
+        }
+
+        .ot-table tbody tr { transition: background-color var(--ot-fast) var(--ot-ease); }
+        .ot-table tbody tr:hover { background: var(--ot-primary-soft); }
+        .ot-table tbody tr:last-child td { border-bottom: none; }
+
+        .ot-table-scroll {
+            overflow-x: auto;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* Wide tables scroll instead of squeezing their columns on narrow screens */
+        .ot-table-scroll > .ot-table { min-width: 680px; }
+
+        /* ================= badges ================= */
+        .ot-badge {
+            display: inline-block;
+            font-size: var(--ot-fs-xs);
+            font-weight: 700;
+            letter-spacing: var(--ot-ls-wide);
+            padding: 3px 9px;
+            border-radius: var(--ot-radius-pill);
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+
+        .ot-badge-critical { background: var(--ot-critical-soft); color: var(--ot-critical); border-color: #fecaca; }
+        .ot-badge-high     { background: var(--ot-danger-soft);  color: var(--ot-danger);  border-color: #fecaca; }
+        .ot-badge-medium   { background: var(--ot-warning-soft); color: var(--ot-warning);  border-color: #fde68a; }
+        .ot-badge-low      { background: var(--ot-success-soft); color: var(--ot-success);  border-color: #a7f3d0; }
+        .ot-badge-info     { background: var(--ot-info-soft);    color: var(--ot-info);     border-color: #bfdbfe; }
+
+        .ot-status-success { color: var(--ot-success); font-weight: 700; }
+        .ot-status-failure { color: var(--ot-danger);  font-weight: 700; }
+
+        /* ================= flash messages ================= */
+        .ot-flash {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            border-radius: var(--ot-radius);
+            padding: 12px 16px;
+            margin-bottom: 18px;
+            font-size: var(--ot-fs-base);
+            border: 1px solid;
+            animation: ot-slide-in var(--ot-slow) var(--ot-ease) both;
+        }
+
+        .ot-flash-success { background: var(--ot-success-soft); border-color: #86efac; color: #166534; }
+        .ot-flash-error   { background: var(--ot-danger-soft);  border-color: #fca5a5; color: #991b1b; }
+        .ot-flash-info    { background: var(--ot-info-soft);    border-color: #93c5fd; color: #1e40af; }
+
+        /* ================= states (loading / empty / error) ================= */
+        .ot-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-align: center;
+            color: var(--ot-text-muted);
+            font-size: var(--ot-fs-sm);
+            padding: 28px 16px;
+        }
+
+        .ot-state[hidden] { display: none !important; }
+
+        .ot-spinner {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid var(--ot-line);
+            border-top-color: var(--ot-primary);
+            animation: ot-spin 720ms linear infinite;
+        }
+
+        .ot-skeleton {
+            position: relative;
+            overflow: hidden;
+            background: var(--ot-surface-muted);
+            border-radius: var(--ot-radius-sm);
+        }
+
+        .ot-skeleton::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            transform: translateX(-100%);
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .75), transparent);
+            animation: ot-shimmer 1.4s infinite;
+        }
+
+        /* ================= animations ================= */
+        @keyframes ot-spin { to { transform: rotate(360deg); } }
+
+        @keyframes ot-shimmer { 100% { transform: translateX(100%); } }
+
+        @keyframes ot-slide-in {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes ot-rise {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .ot-rise { animation: ot-rise var(--ot-slow) var(--ot-ease) both; }
+
+        /* Respect users who ask for less motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: .001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: .001ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
+    </style>
+</head>
+<body></body>
+</html>

@@ -3,46 +3,229 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="description" content="OT-Sentinel - offline incident response and log forensics for OT/ICS networks"/>
     <title>OT-Sentinel | Forensic Dashboard</title>
     <link th:href="@{/lib/bootstrap.min.css}" rel="stylesheet"/>
     <link th:href="@{/lib/leaflet/leaflet.css}" rel="stylesheet"/>
+    <style th:replace="~{fragments/design-system :: tokens}"></style>
     <style>
-        body { background: #f8fafc; color: #0f172a; }
-        .navbar { background: #0f172a; box-shadow: 0 2px 10px rgba(0,0,0,0.15); }
-        .navbar-brand { color: #22d3ee !important; font-weight: 800; letter-spacing: 0.5px; }
-        .nav-link { color: #cbd5e1 !important; font-weight: 600; }
-        .nav-link:hover, .nav-link.active { color: #22d3ee !important; }
-        .card { border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.04); }
-        .card-stat .value { font-size: 1.75rem; font-weight: 800; color: #0f172a; }
-        .card-stat .label { color: #64748b; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.4px; }
-        .stat-bg { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
-        .chart-card { height: 320px; }
-        canvas { max-height: 260px; }
-        .table th { background: #f1f5f9; color: #475569; font-weight: 700; font-size: 0.85rem; }
-        .badge-sev { font-weight: 700; }
-        .sev-high { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
-        .sev-medium { background: #fffbeb; color: #b45309; border: 1px solid #fdba74; }
-        #threatMap { height: 300px; border-radius: 8px; border: 1px solid #e2e8f0; }
-        #threatMapSection { scroll-margin-top: 16px; }
-        .map-caption { font-size: 0.75rem; color: #64748b; margin-top: 6px; }
-        .flash-success { background: #ecfdf5; border: 1px solid #22c55e; color: #166534; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
-        .flash-error { background: #fef2f2; border: 1px solid #ef4444; color: #b91c1c; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
-        .flash-info { background: #eff6ff; border: 1px solid #3b82f6; color: #1d4ed8; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
-        .empty-state { text-align: center; color: #94a3b8; padding: 40px 20px; }
-        /* Navbar visibility tweaks */
-        .navbar-toggler { border: 1px solid #334155; border-radius: 6px; padding: 4px 8px; }
-        .navbar-toggler:focus { box-shadow: 0 0 0 0.25rem rgba(34, 211, 238, 0.35); }
+        /* ---------- App chrome ---------- */
+        .navbar {
+            background: linear-gradient(180deg, var(--ot-navy-800), var(--ot-navy-900));
+            box-shadow: var(--ot-shadow);
+        }
+
+        .navbar-brand {
+            color: var(--ot-accent) !important;
+            font-weight: 800;
+            letter-spacing: var(--ot-ls-wide);
+            text-transform: uppercase;
+            font-size: var(--ot-fs-md);
+            transition: color var(--ot-fast) var(--ot-ease), opacity var(--ot-fast) var(--ot-ease);
+        }
+        .navbar-brand:hover { color: #67e8f9 !important; }
+
+        .nav-link {
+            color: var(--ot-text-inverse) !important;
+            font-weight: 600;
+            font-size: var(--ot-fs-base);
+            border-radius: var(--ot-radius-sm);
+            padding-inline: 12px;
+            transition: color var(--ot-fast) var(--ot-ease),
+                        background-color var(--ot-fast) var(--ot-ease);
+        }
+        .nav-link:hover { color: var(--ot-accent) !important; background: rgba(34, 211, 238, .10); }
+        .nav-link.active { color: var(--ot-accent) !important; }
+
+        .navbar-toggler {
+            border: 1px solid var(--ot-navy-600);
+            border-radius: var(--ot-radius-sm);
+            padding: 4px 8px;
+            transition: border-color var(--ot-fast) var(--ot-ease), background-color var(--ot-fast) var(--ot-ease);
+        }
+        .navbar-toggler:hover { border-color: var(--ot-accent); }
+        .navbar-toggler:focus { box-shadow: 0 0 0 0.25rem rgba(34, 211, 238, .35); }
+
         .signin-chip {
-            background: rgba(34, 211, 238, 0.12);
-            border: 1px solid rgba(34, 211, 238, 0.4);
-            border-radius: 999px;
-            padding: 4px 14px;
-            color: #e2e8f0;
-            font-size: 0.9rem;
             display: inline-block;
+            background: rgba(34, 211, 238, .12);
+            border: 1px solid rgba(34, 211, 238, .40);
+            border-radius: var(--ot-radius-pill);
+            padding: 4px 14px;
+            color: var(--ot-text-inverse);
+            font-size: var(--ot-fs-sm);
             margin-bottom: 8px;
         }
-        .signin-chip strong { color: #22d3ee; font-weight: 700; }
+        .signin-chip strong { color: var(--ot-accent); font-weight: 700; }
+
+        /* ---------- Stat cards ---------- */
+        .stat-card { position: relative; overflow: hidden; }
+
+        .stat-card .label {
+            color: var(--ot-text-muted);
+            font-size: var(--ot-fs-xs);
+            font-weight: 700;
+            letter-spacing: var(--ot-ls-wide);
+            text-transform: uppercase;
+        }
+
+        .stat-card .value {
+            font-size: var(--ot-fs-2xl);
+            font-weight: 800;
+            line-height: 1.1;
+            color: var(--ot-text);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stat-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: var(--ot-radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+            flex: 0 0 auto;
+            transition: transform var(--ot-base) var(--ot-ease);
+        }
+        .stat-card:hover .stat-icon { transform: scale(1.08) rotate(-4deg); }
+
+        .stat-icon-teal   { background: #cffafe; color: #0e7490; }
+        .stat-icon-red    { background: #fee2e2; color: #b91c1c; }
+        .stat-icon-amber  { background: #fef3c7; color: #b45309; }
+        .stat-icon-rose   { background: #ffe4e6; color: #be123c; }
+
+        /* ---------- Charts ----------
+           The card, its body and the canvas form a definite-height flex chain:
+           header (auto) + body (fills the rest) + canvas (fills the body).
+           Without a definite height the canvas overflowed the card and the
+           legend was painted outside the card border. */
+        .chart-card { height: 330px; }
+        .chart-card .ot-card { display: flex; flex-direction: column; width: 100%; height: 100%; }
+        .chart-card .ot-card-body { position: relative; flex: 1 1 0; min-height: 0; padding: 10px 12px 12px; }
+        .chart-card canvas { display: block; max-width: 100%; }
+
+        .chart-state {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, .92);
+            backdrop-filter: blur(1px);
+            z-index: 3;
+        }
+
+        .chart-state strong { color: var(--ot-text); font-size: var(--ot-fs-base); }
+
+        /* ---------- Threat map ---------- */
+        .map-wrap { position: relative; }
+
+        #threatMap {
+            height: 320px;
+            border-radius: 0 0 var(--ot-radius) var(--ot-radius);
+            background: var(--ot-surface-muted);
+        }
+        #threatMapSection { scroll-margin-top: 16px; }
+
+        .map-caption {
+            font-size: var(--ot-fs-xs);
+            color: var(--ot-text-muted);
+            padding: 10px 16px;
+            border-top: 1px solid var(--ot-line);
+            background: var(--ot-surface-muted);
+        }
+
+        /* ---------- IP location list ---------- */
+        .map-locations {
+            border-top: 1px solid var(--ot-line);
+            max-height: 210px;
+            overflow-y: auto;
+        }
+
+        .map-locations-head {
+            font-size: var(--ot-fs-xs);
+            font-weight: 700;
+            letter-spacing: var(--ot-ls-wide);
+            text-transform: uppercase;
+            color: var(--ot-text-muted);
+            padding: 10px 16px 6px;
+        }
+
+        .map-locations-list {
+            list-style: none;
+            margin: 0;
+            padding: 0 0 10px;
+        }
+
+        .map-loc {
+            display: grid;
+            grid-template-columns: minmax(96px, auto) 1fr auto;
+            gap: 10px;
+            align-items: baseline;
+            padding: 5px 16px;
+            font-size: var(--ot-fs-xs);
+            transition: background-color var(--ot-fast) var(--ot-ease);
+        }
+
+        .map-loc:hover { background: var(--ot-primary-soft); }
+
+        .map-loc-ip { color: var(--ot-text); font-weight: 600; }
+        .map-loc-name { color: var(--ot-text-soft); }
+        .map-loc-coords { color: var(--ot-text-faint); text-align: right; }
+
+        .map-loc-unknown .map-loc-ip { color: var(--ot-warning); }
+        .map-loc-unknown .map-loc-name { color: var(--ot-text-muted); font-style: italic; }
+
+        .leaflet-container { font-family: var(--ot-font-sans); }
+        .leaflet-popup-content-wrapper { border-radius: var(--ot-radius); box-shadow: var(--ot-shadow); }
+        .leaflet-popup-content { font-size: var(--ot-fs-sm); margin: 10px 14px; }
+        .leaflet-control-zoom a { color: var(--ot-text-soft); border-color: var(--ot-line); }
+        .leaflet-control-attribution {
+            font-size: 10px;
+            color: var(--ot-text-muted);
+            background: rgba(255, 255, 255, .82);
+        }
+
+        /* permanent IP labels next to every marker */
+        .ot-map-label {
+            background: rgba(15, 23, 42, .82);
+            border: none;
+            border-radius: var(--ot-radius-sm);
+            color: #f1f5f9;
+            font-family: var(--ot-font-mono);
+            font-size: 10px;
+            line-height: 1.3;
+            padding: 2px 6px;
+            box-shadow: var(--ot-shadow-xs);
+            white-space: nowrap;
+        }
+
+        .ot-map-label::before { display: none; }
+
+        .ot-map-coords { color: var(--ot-text-muted); font-family: var(--ot-font-mono); font-size: 11px; }
+
+        /* ---------- Misc ---------- */
+        .hint { font-size: var(--ot-fs-sm); color: var(--ot-text-muted); }
+        .hint code { font-size: 0.92em; }
+
+        .section-title {
+            font-size: var(--ot-fs-xs);
+            font-weight: 700;
+            letter-spacing: var(--ot-ls-wide);
+            text-transform: uppercase;
+            color: var(--ot-text-muted);
+        }
+
+        .empty-state { color: var(--ot-text-faint); }
+
+        .scroll-y { max-height: 340px; overflow-y: auto; overflow-x: auto; }
+        .scroll-y > .ot-table { min-width: 520px; }
+
+        @media (prefers-reduced-motion: no-preference) {
+            .ot-rise:nth-child(1) { animation-delay: 40ms; }
+            .ot-rise:nth-child(2) { animation-delay: 90ms; }
+            .ot-rise:nth-child(3) { animation-delay: 140ms; }
+            .ot-rise:nth-child(4) { animation-delay: 190ms; }
+            .ot-rise:nth-child(5) { animation-delay: 240ms; }
+        }
     </style>
 </head>
 <body>
@@ -50,7 +233,8 @@
 <nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
         <a class="navbar-brand" th:href="@{/dashboard}">OT-Sentinel</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sentinelNav" aria-label="Toggle navigation">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sentinelNav"
+                aria-controls="sentinelNav" aria-label="Toggle navigation" aria-expanded="false">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="sentinelNav">
@@ -70,133 +254,133 @@
     </div>
 </nav>
 
-<div class="container py-4">
+<main class="container py-4">
 
     <!-- Flash messages -->
-    <div th:if="${success}" class="flash-success" th:text="${success}"></div>
-    <div th:if="${error}" class="flash-error" th:text="${error}"></div>
-    <div th:if="${info}" class="flash-info" th:text="${info}"></div>
+    <div th:if="${success}" class="ot-flash ot-flash-success" role="status" th:text="${success}">Saved</div>
+    <div th:if="${error}" class="ot-flash ot-flash-error" role="alert" th:text="${error}">Error</div>
+    <div th:if="${info}" class="ot-flash ot-flash-info" role="status" th:text="${info}">Info</div>
 
     <!-- Stat cards -->
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
-            <div class="card card-stat">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <div class="label">Total Logs Analysed</div>
-                            <div class="value" th:text="${totalLogs}">0</div>
-                        </div>
-                        <div class="stat-bg" style="background:#e0e7ff; color:#4338ca;">📋</div>
+        <div class="col-6 col-xl-3">
+            <div class="ot-card stat-card ot-rise h-100">
+                <div class="ot-card-body d-flex justify-content-between align-items-center gap-3">
+                    <div>
+                        <div class="label">Total Logs Analysed</div>
+                        <div class="value" th:text="${totalLogs}">0</div>
                     </div>
+                    <div class="stat-icon stat-icon-teal" aria-hidden="true">📋</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card card-stat">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <div class="label">Failed Operations</div>
-                            <div class="value" th:text="${failures}">0</div>
-                        </div>
-                        <div class="stat-bg" style="background:#fee2e2; color:#b91c1c;">⚠️</div>
+        <div class="col-6 col-xl-3">
+            <div class="ot-card stat-card ot-rise h-100">
+                <div class="ot-card-body d-flex justify-content-between align-items-center gap-3">
+                    <div>
+                        <div class="label">Failed Operations</div>
+                        <div class="value" th:text="${failures}">0</div>
                     </div>
+                    <div class="stat-icon stat-icon-red" aria-hidden="true">⚠️</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card card-stat">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <div class="label">Failure Rate</div>
-                            <div class="value" th:text="${failureRate} + '%'">0.0%</div>
-                        </div>
-                        <div class="stat-bg" style="background:#fef3c7; color:#b45309;">📊</div>
+        <div class="col-6 col-xl-3">
+            <div class="ot-card stat-card ot-rise h-100">
+                <div class="ot-card-body d-flex justify-content-between align-items-center gap-3">
+                    <div>
+                        <div class="label">Failure Rate</div>
+                        <div class="value"><span th:text="${failureRate}">0.0</span><span class="fs-6 fw-bold text-muted">%</span></div>
                     </div>
+                    <div class="stat-icon stat-icon-amber" aria-hidden="true">📊</div>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card card-stat">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <div class="label">Active Incidents</div>
-                            <div class="value" th:text="${#lists.size(incidents)}">0</div>
-                        </div>
-                        <div class="stat-bg" style="background:#ffe4e6; color:#e11d48;">🚨</div>
+        <div class="col-6 col-xl-3">
+            <div class="ot-card stat-card ot-rise h-100">
+                <div class="ot-card-body d-flex justify-content-between align-items-center gap-3">
+                    <div>
+                        <div class="label">Active Incidents</div>
+                        <div class="value" th:text="${#lists.size(incidents)}">0</div>
                     </div>
+                    <div class="stat-icon stat-icon-rose" aria-hidden="true">🚨</div>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="row g-4 mb-4">
-        <!-- Log upload -->
+        <!-- ============ Sidebar ============ -->
         <div class="col-lg-4">
-            <div class="card">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0" style="color:#0f172a;">Log Ingestion</h6>
-                    <small class="text-muted">CSV / RAW</small>
+            <div class="ot-card ot-rise">
+                <div class="ot-card-header">
+                    <span>Log Ingestion</span>
+                    <span class="ot-badge ot-badge-info">CSV / RAW</span>
                 </div>
-                <div class="card-body">
-                    <p class="small text-muted mb-2">Standard CSV export. Expected columns:
+                <div class="ot-card-body">
+                    <p class="hint mb-2">Standard CSV export. Expected columns:
                         <br/><code>timestamp,sourceIp,command,status,deviceId</code></p>
                     <form th:action="@{/logs/upload}" method="post" enctype="multipart/form-data">
-                        <input type="file" name="file" class="form-control mb-2" accept=".csv,.txt" required/>
+                        <label class="visually-hidden" for="csvFile">CSV log file</label>
+                        <input type="file" id="csvFile" name="file" class="form-control mb-2" accept=".csv,.txt" required/>
                         <button type="submit" class="btn btn-primary w-100">Parse &amp; Detect</button>
                     </form>
-                    <hr class="my-3"/>
-                    <p class="small text-muted mb-2">Proprietary PLC text format, e.g.
+
+                    <hr class="my-3" style="border-color: var(--ot-line);"/>
+
+                    <p class="hint mb-2">Proprietary PLC text format, e.g.
                         <br/><code>[2026-11-10 08:05:02] WARN Device=HMI-03 Source=192.168.1.50 Action=LOGIN Result=FAIL</code>
                         <br/>— uploaded here and normalised automatically.</p>
                     <form th:action="@{/logs/upload-raw}" method="post" enctype="multipart/form-data">
-                        <input type="file" name="file" class="form-control mb-2" accept=".txt,.log" required/>
+                        <label class="visually-hidden" for="rawFile">Raw PLC text log file</label>
+                        <input type="file" id="rawFile" name="file" class="form-control mb-2" accept=".txt,.log" required/>
                         <button type="submit" class="btn btn-outline-primary w-100">Normalise &amp; Detect</button>
                     </form>
+
                     <form th:action="@{/incidents/detect}" method="post" class="mt-3">
                         <button type="submit" class="btn btn-outline-secondary w-100"
                                 title="Re-scans every log already stored in the database and rebuilds the incident list from scratch - you do NOT need to upload the file again. Useful after a restart or after changing the rule thresholds in application.properties.">
                             Re-scan Stored Logs</button>
-                        <p class="small text-muted mt-2 mb-0">Re-runs the rule engine over all logs already ingested
+                        <p class="hint mt-2 mb-0">Re-runs the rule engine over all logs already ingested
                             &mdash; no re-upload needed.</p>
                     </form>
                 </div>
             </div>
 
-            <div class="card mt-3">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0">Sample Data</h6>
-                </div>
-                <div class="card-body">
-                    <p class="small text-muted">Use <code>sample-data/plc_logs.csv</code> (147 rows) for the CSV path, or
+            <div class="ot-card ot-rise mt-3">
+                <div class="ot-card-header"><span>Sample Data</span></div>
+                <div class="ot-card-body">
+                    <p class="hint mb-0">Use <code>sample-data/plc_logs.csv</code> (147 rows) for the CSV path, or
                         <code>sample-data/raw_plc_logs.txt</code> for the proprietary raw-text path. Both contain a
                         brute-force burst, STOP/DELETE manipulation and off-hours traffic so every rule fires.</p>
                 </div>
             </div>
 
-            <div class="card mt-3">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0">Recent Log Entries</h6>
-                </div>
-                <div class="card-body p-0">
-                    <div style="max-height: 320px; overflow-y: auto;">
-                        <table class="table table-sm mb-0" style="font-size: 0.8rem;">
+            <div class="ot-card ot-rise mt-3">
+                <div class="ot-card-header"><span>Recent Log Entries</span></div>
+                <div class="ot-card-body p-0">
+                    <div class="scroll-y">
+                        <table class="ot-table">
+                            <caption class="visually-hidden">The 20 most recently ingested log entries</caption>
                             <thead>
-                            <tr><th>Timestamp</th><th>Source IP</th><th>Cmd</th><th>Status</th><th>Device</th></tr>
+                            <tr>
+                                <th scope="col">Timestamp</th><th scope="col">Source IP</th>
+                                <th scope="col">Cmd</th><th scope="col">Status</th><th scope="col">Device</th>
+                            </tr>
                             </thead>
                             <tbody>
                             <tr th:each="entry : ${recentLogs}">
-                                <td th:text="${#temporals.format(entry.timestamp, 'dd-MM HH:mm:ss')}">…</td>
-                                <td th:text="${entry.sourceIp}">…</td>
+                                <td class="mono" th:text="${entry.eventTime != null} ? ${#temporals.format(entry.eventTime, 'dd-MM HH:mm:ss')} : '-'">…</td>
+                                <td class="mono" th:text="${entry.sourceIp}">…</td>
                                 <td th:text="${entry.commandType}">…</td>
                                 <td>
-                                    <span th:classappend="${entry.status == 'FAILURE'} ? 'text-danger fw-bold' : 'text-success'"
+                                    <span th:class="${entry.status == 'FAILURE'} ? 'ot-status-failure' : 'ot-status-success'"
                                           th:text="${entry.status}">SUCCESS</span>
                                 </td>
                                 <td th:text="${entry.deviceId}">…</td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(recentLogs)}">
+                                <td colspan="5" class="text-center empty-state py-4">No log entries yet.</td>
                             </tr>
                             </tbody>
                         </table>
@@ -205,254 +389,804 @@
             </div>
         </div>
 
-        <!-- Charts -->
+        <!-- ============ Charts ============ -->
         <div class="col-lg-8">
             <div class="row g-3">
-                <div class="col-12 chart-card">
-                    <div class="card">
-                        <div class="card-header bg-white"><strong>Command Frequency</strong></div>
-                        <div class="card-body p-0"><canvas id="chartCommand"></canvas></div>
+                <div class="col-12 col-xl-6 chart-card">
+                    <div class="ot-card" data-chart="chartCommand">
+                        <div class="ot-card-header"><span>Command Frequency</span></div>
+                        <div class="ot-card-body p-0">
+                            <canvas id="chartCommand" aria-label="Command frequency chart" role="img"></canvas>
+                            <div class="chart-state ot-state" data-state="loading">
+                                <div class="ot-spinner"></div><span>Loading…</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-12 chart-card">
-                    <div class="card">
-                        <div class="card-header bg-white"><strong>Status Distribution</strong></div>
-                        <div class="card-body p-0"><canvas id="chartStatus"></canvas></div>
+                <div class="col-12 col-xl-6 chart-card">
+                    <div class="ot-card" data-chart="chartStatus">
+                        <div class="ot-card-header"><span>Status Distribution</span></div>
+                        <div class="ot-card-body p-0">
+                            <canvas id="chartStatus" aria-label="Status distribution chart" role="img"></canvas>
+                            <div class="chart-state ot-state" data-state="loading">
+                                <div class="ot-spinner"></div><span>Loading…</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-12 chart-card">
-                    <div class="card">
-                        <div class="card-header bg-white"><strong>Timeline — Last 24h</strong></div>
-                        <div class="card-body p-0"><canvas id="chartTimeline"></canvas></div>
+                <div class="col-12 col-xl-6 chart-card">
+                    <div class="ot-card" data-chart="chartTimeline">
+                        <div class="ot-card-header"><span>Timeline — Last 24h</span></div>
+                        <div class="ot-card-body p-0">
+                            <canvas id="chartTimeline" aria-label="Event timeline over the last 24 hours" role="img"></canvas>
+                            <div class="chart-state ot-state" data-state="loading">
+                                <div class="ot-spinner"></div><span>Loading…</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-12 chart-card">
-                    <div class="card">
-                        <div class="card-header bg-white"><strong>Top Source IPs</strong></div>
-                        <div class="card-body p-0"><canvas id="chartTopIps"></canvas></div>
+                <div class="col-12 col-xl-6 chart-card">
+                    <div class="ot-card" data-chart="chartTopIps">
+                        <div class="ot-card-header"><span>Top Source IPs</span></div>
+                        <div class="ot-card-body p-0">
+                            <canvas id="chartTopIps" aria-label="Top source IP addresses" role="img"></canvas>
+                            <div class="chart-state ot-state" data-state="loading">
+                                <div class="ot-spinner"></div><span>Loading…</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <div class="col-12 chart-card">
-                    <div class="card">
-                        <div class="card-header bg-white"><strong>Incidents by Severity</strong></div>
-                        <div class="card-body p-0"><canvas id="chartSeverity"></canvas></div>
+                <div class="col-12 col-xl-6 chart-card">
+                    <div class="ot-card" data-chart="chartSeverity">
+                        <div class="ot-card-header"><span>Incidents by Severity</span></div>
+                        <div class="ot-card-body p-0">
+                            <canvas id="chartSeverity" aria-label="Incidents grouped by severity" role="img"></canvas>
+                            <div class="chart-state ot-state" data-state="loading">
+                                <div class="ot-spinner"></div><span>Loading…</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Incidents + Threat Map -->
+    <!-- ============ Incidents + Threat Map ============ -->
     <div class="row g-4">
         <div class="col-lg-7">
-            <div class="card">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <strong>Detected Incidents</strong>
+            <div class="ot-card ot-rise">
+                <div class="ot-card-header">
+                    <span>Detected Incidents</span>
                     <a th:href="@{/api/report/pdf}" class="btn btn-sm btn-success">Export PDF Report</a>
                 </div>
-                <div class="card-body p-0">
-                    <div th:if="${#lists.isEmpty(incidents)}" class="empty-state p-4">
-                        No incidents detected. Upload and parse logs to run the rule engine.
+                <div class="ot-card-body p-0">
+                    <div th:if="${#lists.isEmpty(incidents)}" class="ot-state empty-state py-5">
+                        <strong>No incidents detected</strong>
+                        <span>Upload and parse logs to run the rule engine.</span>
                     </div>
-                    <table th:if="${not #lists.isEmpty(incidents)}" class="table table-hover mb-0">
-                        <thead>
-                        <tr>
-                            <th>Severity</th><th>Type</th><th>Source IP</th><th>Description</th><th>Detected At</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr th:each="inc : ${incidents}">
-                            <td>
-                                <span th:class="${inc.severity == 'HIGH' or inc.severity == 'CRITICAL'} ? 'badge badge-sev sev-high' : (inc.severity == 'MEDIUM' ? 'badge badge-sev sev-medium' : 'badge badge-sev')"
-                                      th:text="${inc.severity}">HIGH</span>
-                            </td>
-                            <td th:text="${inc.type}">BRUTE_FORCE</td>
-                            <td th:text="${inc.sourceIp}">-</td>
-                            <td th:text="${inc.description}">...</td>
-                            <td th:text="${#temporals.format(inc.detectedAt, 'dd-MM-yyyy HH:mm')}">...</td>
-                        </tr>
-                        </tbody>
-                    </table>
+                    <div class="ot-table-scroll" th:if="${not #lists.isEmpty(incidents)}">
+                        <table class="ot-table">
+                            <caption class="visually-hidden">Incidents flagged by the detection rule engine</caption>
+                            <thead>
+                            <tr>
+                                <th scope="col">Severity</th><th scope="col">Type</th><th scope="col">Source IP</th>
+                                <th scope="col">Description</th><th scope="col">Detected At</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="inc : ${incidents}">
+                                <td>
+                                    <span th:class="${inc.severity == 'CRITICAL'} ? 'ot-badge ot-badge-critical'
+                                          : (${inc.severity == 'HIGH'} ? 'ot-badge ot-badge-high'
+                                          : (${inc.severity == 'MEDIUM'} ? 'ot-badge ot-badge-medium' : 'ot-badge ot-badge-low'))"
+                                          th:text="${inc.severity}">HIGH</span>
+                                </td>
+                                <td class="mono" th:text="${inc.type}">BRUTE_FORCE</td>
+                                <td class="mono" th:text="${inc.sourceIp}">-</td>
+                                <td th:text="${inc.description}">...</td>
+                                <td class="mono" th:text="${#temporals.format(inc.detectedAt, 'dd-MM-yyyy HH:mm')}">...</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="col-lg-5" id="threatMapSection">
-            <div class="card">
-                <div class="card-header bg-white"><strong>Threat Map</strong></div>
-                <div class="card-body p-0">
-                    <div id="threatMap"></div>
-                    <div class="map-caption">Source IP locations are illustrative (offline air-gapped build).<br/>
-                        Real-world deployment can integrate SIEM/IP-intelligence feeds.</div>
+            <div class="ot-card ot-rise">
+                <div class="ot-card-header"><span>Threat Map</span></div>
+                <div class="map-wrap">
+                    <div id="threatMap" role="img" aria-label="Map of source IP activity"></div>
+                    <div class="chart-state ot-state" id="mapState" data-state="loading">
+                        <div class="ot-spinner"></div><span>Loading map &amp; location register…</span>
+                    </div>
                 </div>
+                <div class="map-locations" id="mapLocations"></div>
+                <div class="map-caption">Pins are placed only where the address has a <em>verified</em> location in the
+                    local register. Private addresses have no public geolocation, so they are listed below instead of
+                    being placed at a guessed position &mdash; add the plant's real site coordinates to
+                    <code>static/lib/geo/ip-locations.csv</code> to pin them.</div>
             </div>
         </div>
     </div>
 
-</div>
+</main>
 
 <script th:src="@{/lib/bootstrap.bundle.min.js}"></script>
 <script th:src="@{/lib/chart.umd.min.js}"></script>
 <script th:src="@{/lib/leaflet/leaflet.min.js}"></script>
 <script>
-    // ---------- Charts ----------
-    async function loadJson(path) {
-        const res = await fetch(path, {credentials: 'same-origin'});
-        if (res.status === 401) { window.location.href = '/login'; return null; }
-        return res.json();
-    }
+    // =========================================================================
+    // OT-Sentinel dashboard
+    // -------------------------------------------------------------------------
+    // Every chart has an explicit loading / error state and is safe to re-run:
+    // a failed request never leaves the console with an unhandled rejection.
+    // =========================================================================
+    (function () {
+        'use strict';
 
-    function colorFor(severity) {
-        return severity === 'HIGH' || severity === 'CRITICAL' ? '#ef4444'
-            : severity === 'MEDIUM' ? '#f59e0b' : '#10b981';
-    }
+        var CHART_PALETTE = ['#0891b2', '#059669', '#d946ef', '#7c3aed', '#d97706', '#dc2626', '#0ea5e9'];
+        var SEVERITY_COLORS = {
+            CRITICAL: '#991b1b', HIGH: '#dc2626', MEDIUM: '#d97706', LOW: '#059669'
+        };
 
-    async function renderChartCommand() {
-        const data = await loadJson('/api/charts/command-frequency');
-        if (!data) return;
-        new Chart(document.getElementById('chartCommand'), {
-            type: 'doughnut',
-            data: {
-                labels: data.map(d => d.commandType),
-                datasets: [{data: data.map(d => d.count), backgroundColor: ['#22d3ee','#34d399','#f472b6','#a78bfa','#fbbf24']}]
-            },
-            options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}, title: {display: false}}}
-        });
-    }
+        // ---------- helpers ----------
+        function chartCard(id) {
+            return document.querySelector('[data-chart="' + id + '"]');
+        }
 
-    async function renderChartStatus() {
-        const data = await loadJson('/api/charts/status-distribution');
-        if (!data) return;
-        new Chart(document.getElementById('chartStatus'), {
-            type: 'pie',
-            data: {
-                labels: data.map(d => d.status),
-                datasets: [{data: data.map(d => d.count), backgroundColor: ['#22c55e','#ef4444','#f59e0b']}]
-            },
-            options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}}
-        });
-    }
-
-    async function renderChartTimeline() {
-        const data = await loadJson('/api/charts/timeline');
-        if (!data) return;
-        new Chart(document.getElementById('chartTimeline'), {
-            type: 'line',
-            data: {
-                labels: data.map(d => d.hour),
-                datasets: [{label: 'Events', data: data.map(d => d.count), borderColor: '#22d3ee', fill: false, tension: 0.3, pointRadius: 3}]
-            },
-            options: {responsive: true, maintainAspectRatio: false, scales: {y: {beginAtZero: true, ticks: {stepSize: 1}}}, plugins: {legend: {display: false}}}
-        });
-    }
-
-    async function renderChartTopIps() {
-        const data = await loadJson('/api/charts/top-ips');
-        if (!data) return;
-        new Chart(document.getElementById('chartTopIps'), {
-            type: 'bar',
-            data: {
-                labels: data.map(d => d.ip),
-                datasets: [{label: 'Events', data: data.map(d => d.count), backgroundColor: '#22d3ee'}]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false, indexAxis: 'y',
-                scales: {x: {beginAtZero: true, ticks: {stepSize: 1}}},
-                plugins: {legend: {display: false}}
+        function setState(id, state, message) {
+            var card = chartCard(id);
+            if (!card) { return; }
+            var overlay = card.querySelector('.chart-state');
+            if (!overlay) { return; }
+            if (state === 'hidden') {
+                overlay.hidden = true;
+                overlay.innerHTML = '';
+                return;
             }
-        });
-    }
-
-    async function renderChartSeverity() {
-        const data = await loadJson('/api/charts/incident-severity');
-        if (!data) return;
-        const order = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
-        const colors = {CRITICAL: '#7f1d1d', HIGH: '#ef4444', MEDIUM: '#f59e0b', LOW: '#10b981'};
-        const sorted = order.map(s => data.find(d => d.severity === s)).filter(Boolean);
-        new Chart(document.getElementById('chartSeverity'), {
-            type: 'bar',
-            data: {
-                labels: sorted.map(d => d.severity),
-                datasets: [{label: 'Incidents', data: sorted.map(d => d.count),
-                    backgroundColor: sorted.map(d => colors[d.severity] || '#94a3b8')}]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false,
-                scales: {y: {beginAtZero: true, ticks: {stepSize: 1}}},
-                plugins: {legend: {display: false}}
+            overlay.hidden = false;
+            if (state === 'error') {
+                overlay.innerHTML = '<strong>Could not load this chart</strong>'
+                    + '<span>' + (message || 'The server did not respond.') + '</span>'
+                    + '<button type="button" class="btn btn-sm btn-outline-primary js-retry">Retry</button>';
+                var retry = overlay.querySelector('.js-retry');
+                if (retry) {
+                    retry.addEventListener('click', function () {
+                        var runner = CHART_RUNNERS[id];
+                        if (runner) { runner(); }
+                    });
+                }
+            } else {
+                overlay.innerHTML = '<div class="ot-spinner"></div><span>Loading…</span>';
             }
-        });
-    }
+        }
 
-    function ipToLatLon(ip) {
-        let h = 0;
-        for (let i = 0; i < ip.length; i++) h = ((h << 5) - h + ip.charCodeAt(i)) | 0;
-        return [20 + (Math.abs(h) % 45), -110 + (Math.abs(h) % 70)];
-    }
+        /**
+         * Fetches JSON with full error handling.
+         * @returns {Promise<Array|null>} null when the request failed
+         */
+        function loadJson(path) {
+            return fetch(path, {credentials: 'same-origin', headers: {'Accept': 'application/json'}})
+                .then(function (res) {
+                    if (res.status === 401) {
+                        window.location.href = '/login';
+                        return null;
+                    }
+                    if (!res.ok) {
+                        throw new Error('HTTP ' + res.status);
+                    }
+                    return res.json();
+                })
+                .catch(function (err) {
+                    console.warn('Failed to load ' + path + ':', err && err.message);
+                    return null;
+                });
+        }
 
-    async function initThreatMap() {
-        const data = await loadJson('/api/charts/top-ips');
-        const map = L.map('threatMap', {zoomControl: false}).setView([37, -95], 4);
-        window.threatMapInstance = map;   // kept so it can be re-measured when scrolled into view
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 5, attribution: '© OpenStreetMap (illustrative)'
-        }).addTo(map);
-        if (data) {
-            data.forEach(d => {
-                const [lat, lon] = ipToLatLon(d.ip);
-                const sev = d.count > 10 ? 'high' : d.count > 4 ? 'medium' : 'low';
-                const color = sev === 'high' ? '#ef4444' : sev === 'medium' ? '#f59e0b' : '#10b981';
-                L.circleMarker([lat, lon], {
-                    radius: 6 + Math.min(d.count, 20),
-                    fillColor: color, color: '#fff', weight: 1, fillOpacity: 0.75
-                }).addTo(map).bindPopup('<b>' + d.ip + '</b><br>Events: ' + d.count + '<br>Severity: ' + sev.toUpperCase());
+        function destroyChart(id) {
+            var canvas = document.getElementById(id);
+            if (canvas && window.Chart) {
+                var existing = Chart.getChart(canvas);
+                if (existing) { existing.destroy(); }
+            }
+        }
+
+        function emptyState(id, labels) {
+            return labels.length === 0;
+        }
+
+        // ---------- charts ----------
+        function renderChartCommand() {
+            var id = 'chartCommand';
+            setState(id, 'loading');
+            return loadJson('/api/charts/command-frequency').then(function (data) {
+                if (!data) { setState(id, 'error', 'Server unreachable.'); return; }
+                if (emptyState(id, data)) { setState(id, 'hidden'); return; }
+                destroyChart(id);
+                new Chart(document.getElementById(id), {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.map(function (d) { return d.commandType; }),
+                        datasets: [{
+                            data: data.map(function (d) { return d.count; }),
+                            backgroundColor: CHART_PALETTE,
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {position: 'bottom', labels: {boxWidth: 10, font: {size: 11}}},
+                            title: {display: false}
+                        }
+                    }
+                });
+                setState(id, 'hidden');
             });
         }
-    }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        renderChartCommand();
-        renderChartStatus();
-        renderChartTimeline();
-        renderChartTopIps();
-        renderChartSeverity();
-        initThreatMap();
-    });
-
-    // ---------- In-page navigation ----------
-    // Anchor links (e.g. "Threat Map") scroll to the section instead of reloading
-    // the page, collapse the mobile navbar, and re-measure the Leaflet map.
-    document.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('a[href^="#"]').forEach(link => {
-            link.addEventListener('click', function (e) {
-                const href = this.getAttribute('href');
-                const target = href.length > 1 ? document.querySelector(href) : null;
-                if (!target) return;
-                e.preventDefault();
-
-                const collapseEl = document.getElementById('sentinelNav');
-                if (collapseEl && collapseEl.classList.contains('show') && window.bootstrap) {
-                    const instance = bootstrap.Collapse.getInstance(collapseEl);
-                    if (instance) instance.hide();
-                }
-
-                target.scrollIntoView({behavior: 'smooth', block: 'start'});
-
-                // keep the URL in sync without triggering an instant jump
-                if (window.history && history.replaceState) {
-                    history.replaceState(null, '', href);
-                }
-
-                // Leaflet caches the container size - refresh it once the scroll finished
-                setTimeout(() => {
-                    if (window.threatMapInstance) {
-                        window.threatMapInstance.invalidateSize();
+        function renderChartStatus() {
+            var id = 'chartStatus';
+            setState(id, 'loading');
+            return loadJson('/api/charts/status-distribution').then(function (data) {
+                if (!data) { setState(id, 'error', 'Server unreachable.'); return; }
+                if (emptyState(id, data)) { setState(id, 'hidden'); return; }
+                destroyChart(id);
+                new Chart(document.getElementById(id), {
+                    type: 'pie',
+                    data: {
+                        labels: data.map(function (d) { return d.status; }),
+                        datasets: [{
+                            data: data.map(function (d) { return d.count; }),
+                            backgroundColor: ['#059669', '#dc2626', '#d97706', '#0891b2'],
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {position: 'bottom', labels: {boxWidth: 10, font: {size: 11}}}
+                        }
                     }
-                }, 450);
+                });
+                setState(id, 'hidden');
             });
+        }
+
+        function renderChartTimeline() {
+            var id = 'chartTimeline';
+            setState(id, 'loading');
+            return loadJson('/api/charts/timeline').then(function (data) {
+                if (!data) { setState(id, 'error', 'Server unreachable.'); return; }
+                destroyChart(id);
+                new Chart(document.getElementById(id), {
+                    type: 'line',
+                    data: {
+                        // Short axis labels ("19:00") - the full timestamp stays in the tooltip
+                        labels: data.map(function (d) { return d.hour.indexOf(' ') > -1 ? d.hour.split(' ')[1] : d.hour; }),
+                        datasets: [{
+                            label: 'Events',
+                            data: data.map(function (d) { return d.count; }),
+                            borderColor: '#0891b2',
+                            backgroundColor: 'rgba(8, 145, 178, .12)',
+                            fill: true,
+                            tension: .35,
+                            pointRadius: 2,
+                            pointHoverRadius: 6,
+                            pointBackgroundColor: '#0891b2',
+                            pointBorderWidth: 2,
+                            pointBorderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {mode: 'index', intersect: false},
+                        layout: {padding: {top: 6}},
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {maxTicksLimit: 6, precision: 0, font: {size: 11}},
+                                grid: {color: 'rgba(148, 163, 184, .22)'}
+                            },
+                            x: {
+                                ticks: {
+                                    maxTicksLimit: 8,
+                                    autoSkip: true,
+                                    maxRotation: 0,
+                                    font: {size: 11}
+                                },
+                                grid: {display: false}
+                            }
+                        },
+                        plugins: {
+                            legend: {display: false},
+                            tooltip: {
+                                callbacks: {
+                                    title: function (items) {
+                                        var full = data[items[0].dataIndex];
+                                        return full ? full.hour : items[0].label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                setState(id, 'hidden');
+            });
+        }
+
+        function renderChartTopIps() {
+            var id = 'chartTopIps';
+            setState(id, 'loading');
+            return loadJson('/api/charts/top-ips').then(function (data) {
+                if (!data) { setState(id, 'error', 'Server unreachable.'); return; }
+                if (emptyState(id, data)) { setState(id, 'hidden'); return; }
+                destroyChart(id);
+                new Chart(document.getElementById(id), {
+                    type: 'bar',
+                    data: {
+                        labels: data.map(function (d) { return d.ip; }),
+                        datasets: [{
+                            label: 'Events',
+                            data: data.map(function (d) { return d.count; }),
+                            backgroundColor: '#0891b2',
+                            borderRadius: 4,
+                            hoverBackgroundColor: '#22d3ee'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        layout: {padding: {right: 10}},
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: {maxTicksLimit: 6, precision: 0, font: {size: 11}},
+                                grid: {color: 'rgba(148, 163, 184, .22)'}
+                            },
+                            y: {
+                                ticks: {font: {family: 'ui-monospace, monospace', size: 11}, crossAlign: 'far'},
+                                grid: {display: false}
+                            }
+                        },
+                        plugins: {legend: {display: false}}
+                    }
+                });
+                setState(id, 'hidden');
+            });
+        }
+
+        function renderChartSeverity() {
+            var id = 'chartSeverity';
+            setState(id, 'loading');
+            return loadJson('/api/charts/incident-severity').then(function (data) {
+                if (!data) { setState(id, 'error', 'Server unreachable.'); return; }
+                if (emptyState(id, data)) { setState(id, 'hidden'); return; }
+                destroyChart(id);
+                var order = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'];
+                var sorted = order.map(function (s) {
+                    return data.filter(function (d) { return d.severity === s; })[0];
+                }).filter(Boolean);
+                new Chart(document.getElementById(id), {
+                    type: 'bar',
+                    data: {
+                        labels: sorted.map(function (d) { return d.severity; }),
+                        datasets: [{
+                            label: 'Incidents',
+                            data: sorted.map(function (d) { return d.count; }),
+                            backgroundColor: sorted.map(function (d) { return SEVERITY_COLORS[d.severity] || '#94a3b8'; }),
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {beginAtZero: true, ticks: {stepSize: 1, precision: 0}},
+                            x: {ticks: {font: {size: 11}}}
+                        },
+                        plugins: {legend: {display: false}}
+                    }
+                });
+                setState(id, 'hidden');
+            });
+        }
+
+        // ---------- threat map (fully offline) ----------
+        /**
+         * A locally rendered graticule layer. No external tile server is contacted,
+         * so the map works on an air-gapped network and leaks nothing.
+         */
+        var OfflineGridLayer = L.GridLayer.extend({
+            createTile: function (coords) {
+                var size = this.getTileSize();
+                var tile = document.createElement('canvas');
+                tile.width = size.x;
+                tile.height = size.y;
+                var ctx = tile.getContext('2d');
+
+                ctx.fillStyle = '#eef4fb';
+                ctx.fillRect(0, 0, size.x, size.y);
+
+                // graticule
+                ctx.strokeStyle = 'rgba(100, 116, 139, .18)';
+                ctx.lineWidth = 1;
+                var step = size.x / 4;
+                for (var i = 1; i < 4; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(Math.round(i * step) + .5, 0);
+                    ctx.lineTo(Math.round(i * step) + .5, size.y);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(0, Math.round(i * step) + .5);
+                    ctx.lineTo(size.x, Math.round(i * step) + .5);
+                    ctx.stroke();
+                }
+
+                // coordinates of the tile's top-left corner (slippy-map projection)
+                var n = Math.pow(2, coords.z);
+                var lat = 90 - (coords.y / n) * 180;
+                var lon = (coords.x / n) * 360 - 180;
+                ctx.fillStyle = 'rgba(71, 85, 105, .6)';
+                ctx.font = '10px ui-monospace, monospace';
+                ctx.fillText(lat.toFixed(0) + '° ' + lon.toFixed(0) + '°', 5, 14);
+
+                return tile;
+            }
         });
-    });
+
+        /** Country outlines, bundled locally - no tile server, no internet. */
+        function loadWorldOutline() {
+            return fetch('/lib/geo/world-countries.geojson', {credentials: 'same-origin'})
+                .then(function (res) {
+                    if (!res.ok) { throw new Error('HTTP ' + res.status); }
+                    return res.json();
+                })
+                .catch(function (err) {
+                    console.warn('World outline unavailable:', err && err.message);
+                    return null;
+                });
+        }
+
+        // ---------- IP location register ----------
+        // Air-gapped installations cannot query a public GeoIP service, so the
+        // coordinates come from a local register (plant asset register + real
+        // public ranges). Addresses that are not in the register are reported as
+        // such instead of being placed at a made-up position.
+        function ipToInt(ip) {
+            var parts = String(ip).split('.');
+            if (parts.length !== 4) { return null; }
+            var v = 0;
+            for (var i = 0; i < 4; i++) {
+                var n = parseInt(parts[i], 10);
+                if (isNaN(n) || n < 0 || n > 255) { return null; }
+                v = ((v * 256) + n) >>> 0;
+            }
+            return v;
+        }
+
+        function parseRange(range) {
+            var slash = range.indexOf('/');
+            if (slash < 0) {
+                var single = ipToInt(range);
+                return single === null ? null : {start: single, end: single, prefix: 32};
+            }
+            var base = ipToInt(range.substring(0, slash));
+            var bits = parseInt(range.substring(slash + 1), 10);
+            if (base === null || isNaN(bits) || bits < 0 || bits > 32) { return null; }
+            var mask = bits === 0 ? 0 : (0xFFFFFFFF << (32 - bits)) >>> 0;
+            var start = (base & mask) >>> 0;
+            var size = Math.pow(2, 32 - bits);
+            return {start: start, end: (start + size - 1) >>> 0, prefix: bits};
+        }
+
+        function loadLocationRegister() {
+            return fetch('/lib/geo/ip-locations.csv', {credentials: 'same-origin'})
+                .then(function (res) {
+                    if (!res.ok) { throw new Error('HTTP ' + res.status); }
+                    return res.text();
+                })
+                .then(function (text) {
+                    var entries = [];
+                    text.split('\n').forEach(function (line) {
+                        line = line.trim();
+                        if (!line || line.charAt(0) === '#') { return; }
+                        // Parsed from the right: the last two fields are the coordinates,
+                        // everything between the range and them is the label. This keeps
+                        // labels that contain a comma (e.g. "Mountain View, US") intact.
+                        var f = line.split(',');
+                        if (f.length < 4) { return; }
+                        var range = parseRange(f[0].trim());
+                        var lat = parseFloat(f[f.length - 2]);
+                        var lon = parseFloat(f[f.length - 1]);
+                        var label = f.slice(1, f.length - 2).join(',').trim();
+                        if (!range || isNaN(lat) || isNaN(lon) || !label) { return; }
+                        entries.push({
+                            start: range.start,
+                            end: range.end,
+                            prefix: range.prefix,
+                            exact: range.start === range.end,
+                            label: label,
+                            lat: lat,
+                            lon: lon
+                        });
+                    });
+                    // the most specific entry wins
+                    entries.sort(function (a, b) { return b.prefix - a.prefix; });
+                    return entries;
+                })
+                .catch(function (err) {
+                    console.warn('IP location register unavailable:', err && err.message);
+                    return [];
+                });
+        }
+
+        function resolveLocation(ip, register) {
+            var v = ipToInt(ip);
+            if (v === null) { return null; }
+            for (var i = 0; i < register.length; i++) {
+                var e = register[i];
+                if (v >= e.start && v <= e.end) {
+                    return {lat: e.lat, lon: e.lon, label: e.label, exact: e.exact};
+                }
+            }
+            return null;
+        }
+
+        function isPrivateAddress(ip) {
+            var v = ipToInt(ip);
+            if (v === null) { return false; }
+            var a = (v >>> 24) & 0xFF;
+            var b = (v >>> 16) & 0xFF;
+            return a === 0 || a === 10 || a === 127
+                || (a === 172 && b >= 16 && b <= 31)
+                || (a === 192 && b === 168)
+                || (a === 169 && b === 254)
+                || (a === 100 && b >= 64 && b <= 127);
+        }
+
+        /** Small deterministic offset so pins inside the same segment stay visible. */
+        function pinOffset(ip) {
+            var h = 0;
+            for (var i = 0; i < ip.length; i++) {
+                h = ((h << 5) - h + ip.charCodeAt(i)) | 0;
+            }
+            var a = ((Math.abs(h) % 100) / 100) - 0.5;
+            var b = ((Math.abs(h >> 9) % 100) / 100) - 0.5;
+            return [a * 0.02, b * 0.02];
+        }
+
+        /** Loading / error state for the map panel. */
+        function setMapState(state, message) {
+            var overlay = document.getElementById('mapState');
+            if (!overlay) { return; }
+            if (state === 'hidden') {
+                overlay.hidden = true;
+                overlay.innerHTML = '';
+                return;
+            }
+            overlay.hidden = false;
+            overlay.innerHTML = state === 'error'
+                ? '<strong>Map unavailable</strong><span>' + (message || 'Unknown error.') + '</span>'
+                : '<div class="ot-spinner"></div><span>Loading map &amp; location register…</span>';
+        }
+
+        function initThreatMap() {
+            var container = document.getElementById('threatMap');
+            if (!container || !window.L) { return Promise.resolve(); }
+
+            // An initial view is required: without it the map never fires its 'load'
+            // event, the SVG renderer stays uninitialised and adding markers throws.
+            var map = L.map('threatMap', {
+                zoomControl: true,
+                attributionControl: true,
+                minZoom: 2,
+                maxZoom: 10
+            }).setView([30, -60], 2);
+            window.threatMapInstance = map;
+
+            // Adopt the real container size. Leaflet only listens to window resizes, so a
+            // container that changes size (fonts loading, navbar collapsing, layout
+            // reflow) must be told explicitly - otherwise the renderer keeps a stale
+            // size and the markers are drawn as empty paths.
+            map.invalidateSize({pan: false});
+            if (window.ResizeObserver) {
+                window.threatMapObserver = new ResizeObserver(function () {
+                    if (window.threatMapInstance) {
+                        // pan:false keeps the current view centred - the default 'pan'
+                        // behaviour would drift the map on every observed resize.
+                        window.threatMapInstance.invalidateSize({pan: false, debounceMoveend: true});
+                    }
+                });
+                window.threatMapObserver.observe(container);
+            }
+
+            new OfflineGridLayer({tileSize: 256, noWrap: false}).addTo(map);
+            map.attributionControl.setPrefix(false);
+            map.attributionControl.addAttribution('Offline basemap &copy; Natural Earth (bundled)');
+
+            // Built empty and added to the map only once the outline data has arrived -
+            // adding an empty GeoJSON layer to Leaflet throws while clipping.
+            var outline = L.geoJSON(null, {
+                style: {
+                    color: '#9fb4cb',
+                    weight: 0.9,
+                    fillColor: '#d2dfec',
+                    fillOpacity: 1
+                },
+                interactive: false
+            });
+
+            return Promise.all([loadWorldOutline(), loadLocationRegister(), loadJson('/api/charts/sources')])
+                .then(function (results) {
+                    var world = results[0];
+                    var register = results[1];
+                    var data = results[2];
+
+                    if (world && world.features) {
+                        outline.addData(world);
+                        outline.addTo(map);
+                        outline.bringToBack();
+                    }
+
+                    if (!data) { return; }
+
+                    var bounds = [];
+                    var resolved = [];
+                    var unresolved = [];
+
+                    data.forEach(function (d) {
+                        var location = resolveLocation(d.ip, register);
+                        if (!location) {
+                            unresolved.push({
+                                ip: d.ip,
+                                count: d.count,
+                                reason: isPrivateAddress(d.ip)
+                                    ? 'internal address - no public geolocation (register the site to pin it)'
+                                    : 'public address - no entry in the location register'
+                            });
+                            return;
+                        }
+
+                        var offset = pinOffset(d.ip);
+                        var position = [location.lat + offset[0], location.lon + offset[1]];
+                        bounds.push(position);
+                        resolved.push({ip: d.ip, count: d.count, location: location, position: position});
+
+                        var sev = d.count > 10 ? 'high' : d.count > 4 ? 'medium' : 'low';
+                        var color = sev === 'high' ? '#dc2626' : sev === 'medium' ? '#d97706' : '#059669';
+                        var marker = L.circleMarker(position, {
+                            radius: 6 + Math.min(d.count, 14) * 0.55,
+                            fillColor: color,
+                            color: '#ffffff',
+                            weight: 1.5,
+                            fillOpacity: 0.9
+                        }).addTo(map);
+
+                        // A permanent label pin-points every source IP on the map
+                        marker.bindTooltip(d.ip, {
+                            permanent: true,
+                            direction: 'right',
+                            offset: [8, 0],
+                            className: 'ot-map-label'
+                        });
+                        marker.bindPopup(
+                            '<b>' + d.ip + '</b><br>' + location.label
+                            + '<br>Events: ' + d.count
+                            + '<br>Severity: ' + sev.toUpperCase()
+                            + '<br><span class="ot-map-coords">' + location.lat.toFixed(4) + '°, '
+                            + location.lon.toFixed(4) + '°</span>');
+                    });
+
+                    renderLocationList(resolved, unresolved);
+
+                    // Frame every located pin with a comfortable margin. The zoom is
+                    // computed explicitly so the view is applied in one non-animated step.
+                    if (bounds.length) {
+                        var latLngBounds = L.latLngBounds(bounds).pad(0.25);
+                        var zoom = map.getBoundsZoom(latLngBounds, false, [30, 30]);
+                        map.setView(latLngBounds.getCenter(), Math.max(map.getMinZoom(), zoom), {animate: false});
+                    }
+                    map.invalidateSize({pan: false});
+                    setMapState('hidden');
+                })
+                .catch(function (err) {
+                    console.warn('Threat map failed to initialise:', err && err.message);
+                    setMapState('error', 'Could not load the offline basemap.');
+                });
+        }
+
+        /** Lists where every source IP was located (or why it could not be located). */
+        function renderLocationList(resolved, unresolved) {
+            var host = document.getElementById('mapLocations');
+            if (!host) { return; }
+
+            var html = '<div class="map-locations-head">Source IP locations</div><ul class="map-locations-list">';
+
+            resolved.forEach(function (r) {
+                html += '<li class="map-loc"><span class="map-loc-ip mono">' + r.ip + '</span>'
+                    + '<span class="map-loc-name">' + r.location.label + '</span>'
+                    + '<span class="map-loc-coords mono">'
+                    + r.location.lat.toFixed(3) + ', ' + r.location.lon.toFixed(3) + '</span></li>';
+            });
+
+            unresolved.forEach(function (u) {
+                html += '<li class="map-loc map-loc-unknown"><span class="map-loc-ip mono">' + u.ip + '</span>'
+                    + '<span class="map-loc-name">' + u.reason + '</span>'
+                    + '<span class="map-loc-coords mono">' + u.count + ' events</span></li>';
+            });
+
+            html += '</ul>';
+            host.innerHTML = html;
+        }
+
+        // ---------- bootstrap ----------
+        var CHART_RUNNERS = {
+            chartCommand: renderChartCommand,
+            chartStatus: renderChartStatus,
+            chartTimeline: renderChartTimeline,
+            chartTopIps: renderChartTopIps,
+            chartSeverity: renderChartSeverity
+        };
+
+        function initCharts() {
+            Object.keys(CHART_RUNNERS).forEach(function (id) {
+                try {
+                    CHART_RUNNERS[id]();
+                } catch (e) {
+                    console.warn('Chart ' + id + ' failed:', e);
+                    setState(id, 'error', e && e.message);
+                }
+            });
+        }
+
+        /**
+         * In-page navigation: smooth scroll, collapse the mobile navbar,
+         * keep the URL in sync and re-measure the Leaflet map afterwards.
+         */
+        function initAnchorLinks() {
+            document.querySelectorAll('a[href^="#"]').forEach(function (link) {
+                link.addEventListener('click', function (event) {
+                    var href = this.getAttribute('href');
+                    var target = href && href.length > 1 ? document.querySelector(href) : null;
+                    if (!target) { return; }
+                    event.preventDefault();
+
+                    var collapseEl = document.getElementById('sentinelNav');
+                    if (collapseEl && collapseEl.classList.contains('show') && window.bootstrap) {
+                        var instance = bootstrap.Collapse.getInstance(collapseEl);
+                        if (instance) { instance.hide(); }
+                    }
+
+                    target.scrollIntoView({behavior: 'smooth', block: 'start'});
+
+                    if (window.history && history.replaceState) {
+                        history.replaceState(null, '', href);
+                    }
+
+                    window.setTimeout(function () {
+                        if (window.threatMapInstance) {
+                            window.threatMapInstance.invalidateSize();
+                        }
+                    }, 450);
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            initCharts();
+            initThreatMap();
+            initAnchorLinks();
+        });
+    })();
 </script>
 </body>
 </html>

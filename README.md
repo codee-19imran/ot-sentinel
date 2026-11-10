@@ -14,10 +14,10 @@ Most OT security tooling is commercial (Nozomi, Claroty) or focuses on network
 scanning. Log forensics on air-gapped networks has no simple open-source
 package — until now. OT-Sentinel gives you:
 
-- Local authentication (JWT in an HttpOnly cookie, no cloud IdP)
-- CSV/TXT log ingestion from PLC/RTU exports
+- Local authentication (JWT in an HttpOnly cookie, no cloud IdP) with sign-in lockout
+- CSV **and** proprietary raw-text log ingestion from PLC/RTU exports
 - Rule-based detection engine (brute force, unusual commands, off-hours activity)
-- Interactive forensic dashboard (Chart.js + threat map, all bundled locally)
+- Interactive forensic dashboard (Chart.js + fully offline threat map, all bundled locally)
 - One-click PDF incident report via Apache PDFBox
 
 ## Tech stack
@@ -36,13 +36,25 @@ package — until now. OT-Sentinel gives you:
 
 ```
 com.ot.sentinel
-├── config / security          # SecurityConfig, JwtAuthenticationFilter, JwtUtil
+├── security                    # SecurityConfig, JwtAuthenticationFilter, JwtUtil
 ├── controller                 # AuthController, DashboardController, ReportController
-├── service                    # LogParserService, RawLogNormalizerService, AnomalyDetectionService, ReportService
+├── service                    # LogParserService, RawLogNormalizerService,
+│                              # AnomalyDetectionService, ReportService, LoginAttemptService
 ├── repository                 # LogEntryRepository, IncidentRepository, UserRepository
+│                              # + LabelCount / LogRow aggregation projections
 ├── model                      # LogEntry, Incident, User
-└── resources                  # templates, movable static assets, sample dataset
+└── resources
+    ├── templates              # dashboard.html, login.html, fragments/design-system.html
+    ├── static/lib             # Bootstrap, Chart.js, Leaflet (all served locally)
+    └── sample-data            # plc_logs.csv, raw_plc_logs.txt
 ```
+
+### Design system
+
+All screens share one source of truth: `templates/fragments/design-system.html`
+holds the semantic CSS custom properties (colour, typography scale, spacing,
+radii, shadows, motion) that the login page and the dashboard both consume, so
+the two can never drift apart.
 
 ## Getting started
 
@@ -125,11 +137,12 @@ ot-sentinel.rules.off-hours=0-5
 | GET    | `/dashboard`                  | Forensic dashboard              |
 | POST   | `/logs/upload`                | Ingest CSV log file             |
 | POST   | `/logs/upload-raw`            | Ingest proprietary PLC text log (auto-normalised) |
-| POST   | `/incidents/detect`           | Re-run detection rules          |
+| POST   | `/incidents/detect`           | Re-scan all stored logs (no re-upload) |
 | GET    | `/api/charts/command-frequency` | JSON: commands vs counts      |
 | GET    | `/api/charts/status-distribution`| JSON: SUCCESS vs FAILURE     |
 | GET    | `/api/charts/timeline`        | JSON: events per hour (24h)     |
 | GET    | `/api/charts/top-ips`         | JSON: top 10 source IPs         |
+| GET    | `/api/charts/sources`         | JSON: every source IP (map)     |
 | GET    | `/api/charts/incident-severity` | JSON: incidents by severity   |
 | GET    | `/api/report/pdf`             | Download the incident report    |
 
@@ -140,10 +153,66 @@ Production overrides happen through environment variables:
 ```bash
 JWT_SECRET="a-long-random-32+-character-secret"
 JWT_EXPIRATION="86400000"
+OT_SENTINEL_ADMIN_PASSWORD="..."        # seeded admin password
+OT_SENTINEL_ENGINEER_PASSWORD="..."     # seeded engineer password
+OT_SENTINEL_SHOW_CREDENTIALS=false      # hide the demo accounts on the login screen
 ```
 
-The H2 database is stored in `./ot_sentinel_db.mv.db` and is excluded from git
-via `.gitignore`.
+Full property reference (`src/main/resources/application.properties`):
+
+| Property | Default | Purpose |
+|----------|---------|---------|
+| `ot-sentinel.rules.brute-force-threshold` | `5` | Failed logins per IP that trigger `BRUTE_FORCE` |
+| `ot-sentinel.rules.brute-force-window-minutes` | `60` | Sliding window of the brute-force rule |
+| `ot-sentinel.rules.off-hours` | `0-5` | Hour range treated as "off hours" |
+| `ot-sentinel.security.max-login-attempts` | `5` | Failed sign-ins before the account locks |
+| `ot-sentinel.security.login-lockout-minutes` | `5` | Duration of the sign-in lockout |
+| `ot-sentinel.demo.show-credentials` | `true` | Show the seeded accounts on the login screen |
+| `ot-sentinel.h2-console.enabled` | `false` | Enable the embedded H2 console (requires a session) |
+| `spring.jpa.hibernate.ddl-auto` | `update` | Keeps the ingested evidence across restarts |
+
+### Security notes
+
+- The JWT is carried in an `HttpOnly`, `SameSite=Lax` cookie (and `Secure` automatically
+  when served over HTTPS), so cross-site requests cannot ride on the session.
+- API calls that lose their session return `401` with a JSON body; browser navigation
+  is redirected to the login page.
+- The embedded H2 console is **disabled by default** - it exposes the raw evidence
+  tables. Enable it only on an isolated machine.
+- Repeated failed sign-ins lock the account for a configurable period.
+
+### Air-gapped operation
+
+Everything the dashboard needs is bundled: Bootstrap, Chart.js and Leaflet are served
+from `static/lib`. The threat map draws its own graticule locally on a canvas and
+renders the country outlines from a bundled Natural Earth GeoJSON, so **no external
+tile server is contacted and no data leaves the machine**.
+
+### Threat map & IP location register
+
+The map only places a pin where an address has a **verified** location in the local
+register (`static/lib/geo/ip-locations.csv`):
+
+```
+ip_range,label,latitude,longitude
+8.8.8.0/24,Google Public DNS (Mountain View, US),37.3860,-122.0838
+```
+
+* Public ranges ship with their verified real-world coordinates.
+* Private addresses (RFC1918) have **no public geolocation**. They are listed in the
+  "Source IP locations" table as *internal - no public geolocation* and are **not**
+  pinned, because placing them at a guessed position would fabricate evidence.
+* Add your own plant sites to the same file (single address or CIDR block) and those
+  devices are pinned at their real coordinates.
+
+The map uses every distinct source address, not only the top ten - a single connection
+from an unusual network is exactly what a map must show.
+
+## Performance
+
+The dashboard aggregates in the database (`GROUP BY` queries and narrow projections)
+instead of loading the log table into the JVM, and the log table is indexed on
+timestamp, status and source IP. Re-scanning stays responsive on large datasets.
 
 ## Running tests
 
@@ -151,10 +220,10 @@ via `.gitignore`.
 ./gradlew test
 ```
 
-Covers the CSV parser, the raw-text normaliser (field extraction, status
-vocabulary mapping, malformed-line handling), every detection rule, JWT
-issuance/validation/tamper detection, and PDF report generation (including
-pagination).
+Covers the CSV parser (including header detection and unreadable timestamps), the
+raw-text normaliser (field extraction, status vocabulary mapping, malformed-line
+handling), every detection rule, the sign-in lockout, JWT issuance/validation/tamper
+detection, and PDF report generation (including pagination).
 
 ## Roadmap ideas
 

@@ -8,7 +8,11 @@ import java.time.LocalDateTime;
  * A detected security incident produced by the rule engine.
  */
 @Entity
-@Table(name = "incidents")
+@Table(name = "incidents", indexes = {
+        @Index(name = "idx_incidents_resolved", columnList = "resolved"),
+        @Index(name = "idx_incidents_severity", columnList = "severity"),
+        @Index(name = "idx_incidents_detected_at", columnList = "detected_at")
+})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -27,6 +31,7 @@ public class Incident {
 
     private String sourceIp;      // offending source IP (if applicable)
 
+    @Column(name = "detected_at")
     private LocalDateTime detectedAt;
 
     private boolean resolved;

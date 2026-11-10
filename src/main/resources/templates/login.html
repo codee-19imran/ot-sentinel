@@ -3,55 +3,163 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="description" content="OT-Sentinel - secure local sign-in for offline OT/ICS log forensics"/>
     <title>OT-Sentinel | Secure Local Login</title>
     <link th:href="@{/lib/bootstrap.min.css}" rel="stylesheet"/>
+    <style th:replace="~{fragments/design-system :: tokens}"></style>
     <style>
-        body { background: #0f172a; color: #e2e8f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-        .login-card { width: 100%; max-width: 400px; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 40px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); }
-        .brand { text-align: center; margin-bottom: 24px; }
-        .brand h2 { color: #22d3ee; margin: 0; font-size: 1.5rem; letter-spacing: 0.5px; text-transform: uppercase; }
-        .brand p { color: #94a3b8; font-size: 0.85rem; margin-top: 6px; }
-        .form-label { color: #cbd5e1; font-size: 0.875rem; font-weight: 600; }
-        .form-control { background: #0f172a; border: 1px solid #334155; color: #f1f5f9; border-radius: 6px; padding: 8px 12px; }
-        .form-control:focus { background: #0f172a; border-color: #22d3ee; color: #f1f5f9; box-shadow: 0 0 0 0.2rem rgba(34,211,238,0.2); }
-        .btn-sentinel { background: #22d3ee; color: #0f172a; border: none; border-radius: 6px; font-weight: 700; padding: 8px; width: 100%; }
-        .btn-sentinel:hover { background: #67e8f9; }
-        .alert { border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; font-size: 0.9rem; }
-        .alert-danger { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #fca5a5; }
-        .alert-success { background: rgba(34,197,94,0.15); border: 1px solid #22c55e; color: #86efac; }
-        .footer-note { text-align: center; margin-top: 20px; font-size: 0.75rem; color: #64748b; }
+        body {
+            background:
+                radial-gradient(1200px 600px at 12% -10%, rgba(8, 145, 178, .22), transparent 60%),
+                radial-gradient(900px 500px at 95% 110%, rgba(124, 58, 237, .16), transparent 60%),
+                var(--ot-navy-900);
+            color: var(--ot-text-inverse);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 24px 16px;
+        }
+
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            background: linear-gradient(180deg, var(--ot-navy-700), var(--ot-navy-800));
+            border: 1px solid var(--ot-navy-600);
+            border-radius: var(--ot-radius-lg);
+            padding: 36px 32px;
+            box-shadow: var(--ot-shadow-lg);
+            animation: ot-rise var(--ot-slow) var(--ot-ease) both;
+        }
+
+        .brand { text-align: center; margin-bottom: 26px; }
+
+        .brand h1 {
+            color: var(--ot-accent);
+            font-size: var(--ot-fs-xl);
+            font-weight: 800;
+            letter-spacing: var(--ot-ls-wide);
+            text-transform: uppercase;
+            margin: 0;
+        }
+
+        .brand p {
+            color: var(--ot-text-faint);
+            font-size: var(--ot-fs-sm);
+            margin: 6px 0 0;
+        }
+
+        .login-card .form-label { color: var(--ot-text-inverse); }
+
+        .login-card .form-control {
+            background: var(--ot-navy-900);
+            border: 1px solid var(--ot-navy-600);
+            color: #f1f5f9;
+        }
+        .login-card .form-control:hover { border-color: var(--ot-text-faint); }
+        .login-card .form-control:focus {
+            background: var(--ot-navy-900);
+            border-color: var(--ot-accent);
+            color: #f1f5f9;
+            box-shadow: 0 0 0 3px rgba(34, 211, 238, .25);
+        }
+        .login-card .form-control::placeholder { color: var(--ot-text-muted); }
+
+        .btn-sentinel {
+            background: linear-gradient(180deg, var(--ot-accent), var(--ot-primary));
+            color: var(--ot-navy-900);
+            border: none;
+            border-radius: var(--ot-radius-sm);
+            font-weight: 700;
+            padding: 10px;
+            width: 100%;
+            transition: filter var(--ot-fast) var(--ot-ease),
+                        transform var(--ot-fast) var(--ot-ease),
+                        box-shadow var(--ot-fast) var(--ot-ease);
+        }
+        .btn-sentinel:hover {
+            filter: brightness(1.08);
+            box-shadow: 0 8px 20px -8px rgba(34, 211, 238, .8);
+        }
+        .btn-sentinel:active { transform: translateY(1px); }
+        .btn-sentinel:disabled { opacity: .65; cursor: progress; }
+
+        .login-alert {
+            border-radius: var(--ot-radius);
+            padding: 11px 14px;
+            margin-bottom: 16px;
+            font-size: var(--ot-fs-sm);
+            border: 1px solid;
+            animation: ot-slide-in var(--ot-slow) var(--ot-ease) both;
+        }
+        .login-alert-danger { background: rgba(239, 68, 68, .14); border-color: rgba(239, 68, 68, .6); color: #fca5a5; }
+        .login-alert-success { background: rgba(34, 197, 94, .14); border-color: rgba(34, 197, 94, .6); color: #86efac; }
+
+        .footer-note {
+            text-align: center;
+            margin-top: 22px;
+            padding-top: 18px;
+            border-top: 1px solid var(--ot-navy-600);
+            font-size: var(--ot-fs-xs);
+            color: var(--ot-text-faint);
+            line-height: 1.7;
+        }
+        .footer-note strong { color: var(--ot-text-inverse); }
+
+        .spinner-inline {
+            width: 15px; height: 15px;
+            border-radius: 50%;
+            border: 2px solid rgba(11, 18, 32, .35);
+            border-top-color: var(--ot-navy-900);
+            display: inline-block;
+            vertical-align: -2px;
+            margin-right: 8px;
+            animation: ot-spin 720ms linear infinite;
+        }
     </style>
 </head>
 <body>
-<div class="login-card">
+<main class="login-card">
     <div class="brand">
-        <h2>OT-Sentinel</h2>
+        <h1>OT-Sentinel</h1>
         <p>Offline Incident Response &amp; Log Forensics</p>
     </div>
 
-    <div th:if="${param.error}" class="alert alert-danger">
-        Invalid username or password.
-    </div>
-    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
-    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+    <div th:if="${error}" class="login-alert login-alert-danger" role="alert" th:text="${error}">Error</div>
+    <div th:if="${success}" class="login-alert login-alert-success" role="status" th:text="${success}">Signed in</div>
 
-    <form th:action="@{/api/auth/login}" method="post">
+    <form th:action="@{/api/auth/login}" method="post" id="loginForm">
         <div class="mb-3">
             <label class="form-label" for="username">Username</label>
-            <input type="text" id="username" name="username" class="form-control" placeholder="admin" required/>
+            <input type="text" id="username" name="username" class="form-control"
+                   placeholder="engineer" autocomplete="username" autofocus required/>
         </div>
         <div class="mb-3">
             <label class="form-label" for="password">Password</label>
-            <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required/>
+            <input type="password" id="password" name="password" class="form-control"
+                   placeholder="••••••••" autocomplete="current-password" required/>
         </div>
-        <button type="submit" class="btn btn-sentinel mb-3">Sign in</button>
+        <button type="submit" class="btn btn-sentinel mb-3" id="loginButton">Sign in</button>
     </form>
 
     <div class="footer-note">
-        Local air-gapped session only — no cloud connectivity. Default accounts: <br/>
-        <strong>admin / admin123</strong> | <strong>engineer / engineer123</strong>
+        Local air-gapped session only — no cloud connectivity.
+        <div th:if="${showDemoCredentials}">
+            Default accounts:<br/>
+            <strong>admin / admin123</strong> &nbsp;·&nbsp; <strong>engineer / engineer123</strong>
+        </div>
     </div>
-</div>
+</main>
+
 <script th:src="@{/lib/bootstrap.bundle.min.js}"></script>
+<script>
+    // Prevent a double submit while the credentials are being verified.
+    document.getElementById('loginForm').addEventListener('submit', function () {
+        var button = document.getElementById('loginButton');
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-inline"></span>Signing in…';
+    });
+</script>
 </body>
 </html>

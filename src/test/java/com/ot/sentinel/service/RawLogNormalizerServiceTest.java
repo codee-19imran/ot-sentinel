@@ -100,7 +100,7 @@ class RawLogNormalizerServiceTest {
         assertThat(saved.get(0).getCommandType()).isEqualTo("LOGIN");
         assertThat(saved.get(0).getSourceIp()).isEqualTo("192.168.1.50");
         assertThat(saved.get(0).getDeviceId()).isEqualTo("HMI-CONTROL-03");
-        assertThat(saved.get(0).getTimestamp()).isEqualTo(java.time.LocalDateTime.of(2026, 11, 10, 8, 5, 2));
+        assertThat(saved.get(0).getEventTime()).isEqualTo(java.time.LocalDateTime.of(2026, 11, 10, 8, 5, 2));
         assertThat(saved.get(1).getStatus()).isEqualTo("SUCCESS");
     }
 

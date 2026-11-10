@@ -11,7 +11,6 @@ import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import javax.crypto.SecretKey;
 import java.util.Date;
-import java.util.function.Function;
 
 /**
  * JWT utility for secure local (air-gapped) login sessions.
