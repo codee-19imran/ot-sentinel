@@ -2,6 +2,10 @@
 
 **Offline Incident Response & Log Forensics Dashboard** for OT/ICS environments.
 
+> **Documentation:** the full technical project report (architecture, data model, algorithm
+> flows, test evidence, limitations and roadmap) is available in
+> [`PROJECT_REPORT.md`](PROJECT_REPORT.md).
+
 When an OT device (PLC/RTU) is suspected to be compromised, engineers manually
 collect log files from the plant floor. OT-Sentinel is an **air-gapped, local
 web tool** that ingests those logs, parses them, runs rule-based anomaly
