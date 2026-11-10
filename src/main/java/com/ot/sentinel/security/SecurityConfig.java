@@ -43,6 +43,10 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(eh -> eh
+                        // Send browser users with a missing/expired JWT to the login page,
+                        // instead of a bare 403 (default Http403ForbiddenEntryPoint).
+                        .authenticationEntryPoint((req, res, ex) -> res.sendRedirect("/login")))
                 .headers(headers -> headers
                         .frameOptions(frame -> frame.sameOrigin())
                 );

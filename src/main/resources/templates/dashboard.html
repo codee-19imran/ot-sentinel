@@ -28,24 +28,37 @@
         .flash-error { background: #fef2f2; border: 1px solid #ef4444; color: #b91c1c; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
         .flash-info { background: #eff6ff; border: 1px solid #3b82f6; color: #1d4ed8; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
         .empty-state { text-align: center; color: #94a3b8; padding: 40px 20px; }
+        /* Navbar visibility tweaks */
+        .navbar-toggler { border: 1px solid #334155; border-radius: 6px; padding: 4px 8px; }
+        .navbar-toggler:focus { box-shadow: 0 0 0 0.25rem rgba(34, 211, 238, 0.35); }
+        .signin-chip {
+            background: rgba(34, 211, 238, 0.12);
+            border: 1px solid rgba(34, 211, 238, 0.4);
+            border-radius: 999px;
+            padding: 4px 14px;
+            color: #e2e8f0;
+            font-size: 0.9rem;
+        }
+        .signin-chip strong { color: #22d3ee; font-weight: 700; }
     </style>
 </head>
 <body>
 
-<nav class="navbar navbar-expand-lg">
+<nav class="navbar navbar-expand-lg navbar-dark">
     <div class="container">
         <a class="navbar-brand" th:href="@{/dashboard}">OT-Sentinel</a>
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sentinelNav">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#sentinelNav" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="sentinelNav">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item"><a class="nav-link active" th:href="@{/dashboard}">Dashboard</a></li>
                 <li class="nav-item"><a class="nav-link" th:href="@{/api/charts/top-ips}" onclick="event.preventDefault();alert('See Threat Overview below')">Threat Map</a></li>
-                <li class="nav-item"><a class="nav-link" th:href="@{/api/report/pdf}">Incident Report (PDF)</a></li>
+                <li class="nav-item"><a class="nav-link" th:href="@{/api/report/pdf}"
+                                        title="Generates ONE combined PDF report covering EVERY log uploaded so far (all scans together), plus all incidents currently flagged.">Full Incident Report (PDF)</a></li>
             </ul>
             <div class="navbar-nav">
-                <span class="navbar-text me-3">Signed in as <strong th:text="${#authentication.name}">user</strong></span>
+                <span class="navbar-text me-3 signin-chip">Signed in as&nbsp;<strong th:text="${#authentication.name}">user</strong></span>
                 <form th:action="@{/api/auth/logout}" method="post" class="d-inline">
                     <button type="submit" class="btn btn-outline-danger btn-sm">Logout</button>
                 </form>
@@ -299,7 +312,7 @@
             type: 'pie',
             data: {
                 labels: data.map(d => d.status),
-                datasets: [{data: data.map(d => d.count), backgroundColor: ['#22c55e','#ef4444','#f59e0b']]}
+                datasets: [{data: data.map(d => d.count), backgroundColor: ['#22c55e','#ef4444','#f59e0b']}]
             },
             options: {responsive: true, maintainAspectRatio: false, plugins: {legend: {position: 'bottom'}}}
         });
