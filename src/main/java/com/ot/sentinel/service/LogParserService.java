@@ -39,47 +39,64 @@ public class LogParserService {
      * @throws IOException if the file cannot be read
      */
     public List<LogEntry> parseAndSaveLogs(MultipartFile file) throws IOException {
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+            return parseAndSave(reader, file.getOriginalFilename());
+        }
+    }
+
+    /**
+     * Parse already-normalized CSV text (e.g. produced by {@link RawLogNormalizerService}).
+     *
+     * @param csv        full CSV content including the header row
+     * @param sourceName original file name, used for logging
+     * @return the list of persisted log entries
+     */
+    public List<LogEntry> parseAndSaveCsv(String csv, String sourceName) throws IOException {
+        return parseAndSave(new BufferedReader(new java.io.StringReader(csv)), sourceName);
+    }
+
+    /**
+     * Core CSV row loop: reads rows, skips the header and malformed lines, persists the rest.
+     */
+    public List<LogEntry> parseAndSave(BufferedReader reader, String sourceName) throws IOException {
         List<LogEntry> entries = new ArrayList<>();
         int rejected = 0;
 
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
-
-            String line;
-            boolean skipHeader = true;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                if (line.isEmpty()) {
-                    continue;
-                }
-                // Detect and skip a header row such as "timestamp,sourceIp,command,status,deviceId"
-                if (skipHeader && isHeader(line)) {
-                    skipHeader = false;
-                    continue;
-                }
+        String line;
+        boolean skipHeader = true;
+        while ((line = reader.readLine()) != null) {
+            line = line.trim();
+            if (line.isEmpty()) {
+                continue;
+            }
+            // Detect and skip a header row such as "timestamp,sourceIp,command,status,deviceId"
+            if (skipHeader && isHeader(line)) {
                 skipHeader = false;
+                continue;
+            }
+            skipHeader = false;
 
-                String[] values = line.split(",", -1);
-                if (values.length >= 5) {
-                    LogEntry entry = LogEntry.builder()
-                            .timestamp(parseTimestamp(values[0].trim()))
-                            .sourceIp(values[1].trim())
-                            .commandType(values[2].trim())
-                            .status(values[3].trim())
-                            .deviceId(values[4].trim())
-                            .rawLine(line)
-                            .build();
-                    entries.add(entry);
-                } else {
-                    rejected++;
-                    log.warn("{}: skipped malformed row: {}", file.getOriginalFilename(), line);
-                }
+            String[] values = line.split(",", -1);
+            if (values.length >= 5) {
+                LogEntry entry = LogEntry.builder()
+                        .timestamp(parseTimestamp(values[0].trim()))
+                        .sourceIp(values[1].trim())
+                        .commandType(values[2].trim())
+                        .status(values[3].trim())
+                        .deviceId(values[4].trim())
+                        .rawLine(line)
+                        .build();
+                entries.add(entry);
+            } else {
+                rejected++;
+                log.warn("{}: skipped malformed row: {}", sourceName, line);
             }
         }
 
         List<LogEntry> saved = logEntryRepository.saveAll(entries);
         log.info("Parsed {}: {} rows stored, {} malformed rows skipped",
-                file.getOriginalFilename(), saved.size(), rejected);
+                sourceName, saved.size(), rejected);
         return saved;
     }
 

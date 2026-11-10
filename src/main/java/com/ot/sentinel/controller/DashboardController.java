@@ -4,6 +4,7 @@ import com.ot.sentinel.model.Incident;
 import com.ot.sentinel.model.LogEntry;
 import com.ot.sentinel.service.AnomalyDetectionService;
 import com.ot.sentinel.service.LogParserService;
+import com.ot.sentinel.service.RawLogNormalizerService;
 import com.ot.sentinel.service.ReportService;
 import com.ot.sentinel.repository.IncidentRepository;
 import com.ot.sentinel.repository.LogEntryRepository;
@@ -40,17 +41,20 @@ public class DashboardController {
     private final LogEntryRepository logEntryRepository;
     private final IncidentRepository incidentRepository;
     private final LogParserService logParserService;
+    private final RawLogNormalizerService rawLogNormalizerService;
     private final AnomalyDetectionService anomalyDetectionService;
     private final ReportService reportService;
 
     public DashboardController(LogEntryRepository logEntryRepository,
                                IncidentRepository incidentRepository,
                                LogParserService logParserService,
+                               RawLogNormalizerService rawLogNormalizerService,
                                AnomalyDetectionService anomalyDetectionService,
                                ReportService reportService) {
         this.logEntryRepository = logEntryRepository;
         this.incidentRepository = incidentRepository;
         this.logParserService = logParserService;
+        this.rawLogNormalizerService = rawLogNormalizerService;
         this.anomalyDetectionService = anomalyDetectionService;
         this.reportService = reportService;
     }
@@ -91,6 +95,21 @@ public class DashboardController {
                             + " row(s) parsed, " + incidents.size() + " incident(s) flagged by the rule engine.");
         } catch (Exception e) {
             redirect.addFlashAttribute("error", "Failed to parse log file: " + e.getMessage());
+        }
+        return "redirect:/dashboard";
+    }
+
+    @PostMapping("/logs/upload-raw")
+    public String uploadRawLogs(@RequestParam("file") MultipartFile file,
+                                RedirectAttributes redirect) {
+        try {
+            List<LogEntry> saved = rawLogNormalizerService.ingestRawLogs(file);
+            List<Incident> incidents = anomalyDetectionService.detectAll();
+            redirect.addFlashAttribute("success",
+                    "Raw log file \"" + file.getOriginalFilename() + "\" normalised: " + saved.size()
+                            + " row(s) ingested, " + incidents.size() + " incident(s) flagged by the rule engine.");
+        } catch (Exception e) {
+            redirect.addFlashAttribute("error", "Failed to normalise raw log file: " + e.getMessage());
         }
         return "redirect:/dashboard";
     }

@@ -38,7 +38,7 @@ package — until now. OT-Sentinel gives you:
 com.ot.sentinel
 ├── config / security          # SecurityConfig, JwtAuthenticationFilter, JwtUtil
 ├── controller                 # AuthController, DashboardController, ReportController
-├── service                    # LogParserService, AnomalyDetectionService, ReportService
+├── service                    # LogParserService, RawLogNormalizerService, AnomalyDetectionService, ReportService
 ├── repository                 # LogEntryRepository, IncidentRepository, UserRepository
 ├── model                      # LogEntry, Incident, User
 └── resources                  # templates, movable static assets, sample dataset
@@ -66,6 +66,39 @@ Upload `src/main/resources/sample-data/plc_logs.csv` on the dashboard. The
 sample contains a brute-force burst, STOP/DELETE manipulation, and off-hours
 traffic so every rule fires in the demo.
 
+## Log formats & data normalisation
+
+Real PLCs rarely export clean CSV. OT-Sentinel therefore accepts **two**
+ingestion paths, both funnelling into the same canonical schema
+`timestamp,sourceIp,command,status,deviceId`:
+
+**1. Standard CSV** — `POST /logs/upload`
+
+**2. Proprietary PLC text** — `POST /logs/upload-raw`
+
+```
+[2026-11-10 08:05:02] WARN Device=HMI-CONTROL-03 Source=192.168.1.50 Action=LOGIN Result=FAIL
+```
+
+`RawLogNormalizerService` parses those lines with a regex, maps the vendor's
+status vocabulary onto the canonical one (`OK`/`PASS`/`GRANTED` → `SUCCESS`,
+`FAIL`/`DENIED`/`ERROR`/`TIMEOUT` → `FAILURE`), and hands the result to the
+standard parser. Unrecognised lines are counted and skipped, never fatal.
+
+| Raw token | Normalised status |
+|-----------|-------------------|
+| `OK`, `PASS`, `SUCCESS`, `GRANTED`, `ACCEPTED`, `COMPLETE` | `SUCCESS` |
+| `FAIL`, `FAILURE`, `ERROR`, `DENIED`, `REJECTED`, `TIMEOUT`, `REFUSED` | `FAILURE` |
+
+Sample file: `src/main/resources/sample-data/raw_plc_logs.txt`.
+
+Regenerate both samples (with timestamps relative to *now*, so the planted
+attack scenarios always sit inside the detection windows):
+
+```bash
+python3 scripts/generate_sample_logs.py
+```
+
 ## Detection rules
 
 | Rule                | Severity | Trigger                                            |
@@ -90,7 +123,8 @@ ot-sentinel.rules.off-hours=0-5
 | POST   | `/api/auth/login`             | Sign in (sets JWT cookie)       |
 | POST   | `/api/auth/logout`            | Clear JWT cookie                |
 | GET    | `/dashboard`                  | Forensic dashboard              |
-| POST   | `/logs/upload`                | Ingest CSV/TXT log file         |
+| POST   | `/logs/upload`                | Ingest CSV log file             |
+| POST   | `/logs/upload-raw`            | Ingest proprietary PLC text log (auto-normalised) |
 | POST   | `/incidents/detect`           | Re-run detection rules          |
 | GET    | `/api/charts/command-frequency` | JSON: commands vs counts      |
 | GET    | `/api/charts/status-distribution`| JSON: SUCCESS vs FAILURE     |
@@ -117,8 +151,10 @@ via `.gitignore`.
 ./gradlew test
 ```
 
-Covers the CSV parser, every detection rule, JWT issuance/validation/tamper
-detection, and PDF report generation (including pagination).
+Covers the CSV parser, the raw-text normaliser (field extraction, status
+vocabulary mapping, malformed-line handling), every detection rule, JWT
+issuance/validation/tamper detection, and PDF report generation (including
+pagination).
 
 ## Roadmap ideas
 

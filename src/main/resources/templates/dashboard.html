@@ -138,14 +138,22 @@
             <div class="card">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h6 class="mb-0" style="color:#0f172a;">Log Ingestion</h6>
-                    <small class="text-muted">CSV / TXT</small>
+                    <small class="text-muted">CSV / RAW</small>
                 </div>
                 <div class="card-body">
-                    <p class="small text-muted mb-3">Upload PLC/RTU log exports. Expected columns:
+                    <p class="small text-muted mb-2">Standard CSV export. Expected columns:
                         <br/><code>timestamp,sourceIp,command,status,deviceId</code></p>
                     <form th:action="@{/logs/upload}" method="post" enctype="multipart/form-data">
                         <input type="file" name="file" class="form-control mb-2" accept=".csv,.txt" required/>
                         <button type="submit" class="btn btn-primary w-100">Parse &amp; Detect</button>
+                    </form>
+                    <hr class="my-3"/>
+                    <p class="small text-muted mb-2">Proprietary PLC text format, e.g.
+                        <br/><code>[2026-11-10 08:05:02] WARN Device=HMI-03 Source=192.168.1.50 Action=LOGIN Result=FAIL</code>
+                        <br/>— uploaded here and normalised automatically.</p>
+                    <form th:action="@{/logs/upload-raw}" method="post" enctype="multipart/form-data">
+                        <input type="file" name="file" class="form-control mb-2" accept=".txt,.log" required/>
+                        <button type="submit" class="btn btn-outline-primary w-100">Normalise &amp; Detect</button>
                     </form>
                     <form th:action="@{/incidents/detect}" method="post" class="mt-3">
                         <button type="submit" class="btn btn-outline-secondary w-100">Re-run Detection Rules</button>
@@ -158,8 +166,9 @@
                     <h6 class="mb-0">Sample Data</h6>
                 </div>
                 <div class="card-body">
-                    <p class="small text-muted">Use <code>sample-data/plc_logs.csv</code> (151 rows, includes a brute-force
-                        burst and unusual STOP/DELETE commands) to test detection.</p>
+                    <p class="small text-muted">Use <code>sample-data/plc_logs.csv</code> (147 rows) for the CSV path, or
+                        <code>sample-data/raw_plc_logs.txt</code> for the proprietary raw-text path. Both contain a
+                        brute-force burst, STOP/DELETE manipulation and off-hours traffic so every rule fires.</p>
                 </div>
             </div>
 
