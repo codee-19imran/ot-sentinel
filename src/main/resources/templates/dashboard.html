@@ -23,6 +23,7 @@
         .sev-high { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
         .sev-medium { background: #fffbeb; color: #b45309; border: 1px solid #fdba74; }
         #threatMap { height: 300px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        #threatMapSection { scroll-margin-top: 16px; }
         .map-caption { font-size: 0.75rem; color: #64748b; margin-top: 6px; }
         .flash-success { background: #ecfdf5; border: 1px solid #22c55e; color: #166534; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
         .flash-error { background: #fef2f2; border: 1px solid #ef4444; color: #b91c1c; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; }
@@ -55,7 +56,7 @@
         <div class="collapse navbar-collapse" id="sentinelNav">
             <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 <li class="nav-item"><a class="nav-link active" th:href="@{/dashboard}">Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" th:href="@{/api/charts/top-ips}" onclick="event.preventDefault();alert('See Threat Overview below')">Threat Map</a></li>
+                <li class="nav-item"><a class="nav-link nav-anchor" th:href="@{#threatMapSection}">Threat Map</a></li>
                 <li class="nav-item"><a class="nav-link" th:href="@{/api/report/pdf}"
                                         title="Generates ONE combined PDF report covering EVERY log uploaded so far (all scans together), plus all incidents currently flagged.">Full Incident Report (PDF)</a></li>
             </ul>
@@ -277,7 +278,7 @@
             </div>
         </div>
 
-        <div class="col-lg-5">
+        <div class="col-lg-5" id="threatMapSection">
             <div class="card">
                 <div class="card-header bg-white"><strong>Threat Map</strong></div>
                 <div class="card-body p-0">
@@ -393,6 +394,7 @@
     async function initThreatMap() {
         const data = await loadJson('/api/charts/top-ips');
         const map = L.map('threatMap', {zoomControl: false}).setView([37, -95], 4);
+        window.threatMapInstance = map;   // kept so it can be re-measured when scrolled into view
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 5, attribution: '© OpenStreetMap (illustrative)'
         }).addTo(map);
@@ -416,6 +418,40 @@
         renderChartTopIps();
         renderChartSeverity();
         initThreatMap();
+    });
+
+    // ---------- In-page navigation ----------
+    // Anchor links (e.g. "Threat Map") scroll to the section instead of reloading
+    // the page, collapse the mobile navbar, and re-measure the Leaflet map.
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('a[href^="#"]').forEach(link => {
+            link.addEventListener('click', function (e) {
+                const href = this.getAttribute('href');
+                const target = href.length > 1 ? document.querySelector(href) : null;
+                if (!target) return;
+                e.preventDefault();
+
+                const collapseEl = document.getElementById('sentinelNav');
+                if (collapseEl && collapseEl.classList.contains('show') && window.bootstrap) {
+                    const instance = bootstrap.Collapse.getInstance(collapseEl);
+                    if (instance) instance.hide();
+                }
+
+                target.scrollIntoView({behavior: 'smooth', block: 'start'});
+
+                // keep the URL in sync without triggering an instant jump
+                if (window.history && history.replaceState) {
+                    history.replaceState(null, '', href);
+                }
+
+                // Leaflet caches the container size - refresh it once the scroll finished
+                setTimeout(() => {
+                    if (window.threatMapInstance) {
+                        window.threatMapInstance.invalidateSize();
+                    }
+                }, 450);
+            });
+        });
     });
 </script>
 </body>
