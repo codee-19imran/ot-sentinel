@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>OT-Sentinel | Secure Local Login</title>
+    <link th:href="@{/lib/bootstrap.min.css}" rel="stylesheet"/>
+    <style>
+        body { background: #0f172a; color: #e2e8f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .login-card { width: 100%; max-width: 400px; background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 40px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); }
+        .brand { text-align: center; margin-bottom: 24px; }
+        .brand h2 { color: #22d3ee; margin: 0; font-size: 1.5rem; letter-spacing: 0.5px; text-transform: uppercase; }
+        .brand p { color: #94a3b8; font-size: 0.85rem; margin-top: 6px; }
+        .form-label { color: #cbd5e1; font-size: 0.875rem; font-weight: 600; }
+        .form-control { background: #0f172a; border: 1px solid #334155; color: #f1f5f9; border-radius: 6px; padding: 8px 12px; }
+        .form-control:focus { background: #0f172a; border-color: #22d3ee; color: #f1f5f9; box-shadow: 0 0 0 0.2rem rgba(34,211,238,0.2); }
+        .btn-sentinel { background: #22d3ee; color: #0f172a; border: none; border-radius: 6px; font-weight: 700; padding: 8px; width: 100%; }
+        .btn-sentinel:hover { background: #67e8f9; }
+        .alert { border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; font-size: 0.9rem; }
+        .alert-danger { background: rgba(239,68,68,0.15); border: 1px solid #ef4444; color: #fca5a5; }
+        .alert-success { background: rgba(34,197,94,0.15); border: 1px solid #22c55e; color: #86efac; }
+        .footer-note { text-align: center; margin-top: 20px; font-size: 0.75rem; color: #64748b; }
+    </style>
+</head>
+<body>
+<div class="login-card">
+    <div class="brand">
+        <h2>OT-Sentinel</h2>
+        <p>Offline Incident Response &amp; Log Forensics</p>
+    </div>
+
+    <div th:if="${param.error}" class="alert alert-danger">
+        Invalid username or password.
+    </div>
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+    <form th:action="@{/api/auth/login}" method="post">
+        <div class="mb-3">
+            <label class="form-label" for="username">Username</label>
+            <input type="text" id="username" name="username" class="form-control" placeholder="admin" required/>
+        </div>
+        <div class="mb-3">
+            <label class="form-label" for="password">Password</label>
+            <input type="password" id="password" name="password" class="form-control" placeholder="••••••••" required/>
+        </div>
+        <button type="submit" class="btn btn-sentinel mb-3">Sign in</button>
+    </form>
+
+    <div class="footer-note">
+        Local air-gapped session only — no cloud connectivity. Default accounts: <br/>
+        <strong>admin / admin123</strong> | <strong>engineer / engineer123</strong>
+    </div>
+</div>
+<script th:src="@{/lib/bootstrap.bundle.min.js}"></script>
+</body>
+</html>
